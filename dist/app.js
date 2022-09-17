@@ -73,6 +73,15 @@ define("game", ["require", "exports", "asteroids"], function (require, exports, 
         var dist = norm.x * p1.x + norm.y * p1.y;
         return { norm: norm, dist: dist };
     };
+    var scalePoint = function (point, scale) {
+        return { x: point.x * scale, y: point.y * scale };
+    };
+    var dot = function (p1, p2) {
+        return p1.x * p2.x + p1.y * p2.y;
+    };
+    var subtractPoints = function (p1, p2) {
+        return { x: p1.x - p2.x, y: p1.y - p2.y };
+    };
     var linesFromTriangle = function (triangle) {
         var _a = __read(triangle, 3), p1 = _a[0], p2 = _a[1], p3 = _a[2];
         return [pointsToLine(p1, p2), pointsToLine(p2, p3), pointsToLine(p3, p1)];
@@ -158,8 +167,9 @@ define("game", ["require", "exports", "asteroids"], function (require, exports, 
         ctx.arc(point.x, point.y, 2, 0, 2 * Math.PI);
         ctx.fill();
     };
-    var drawCircle = function (circle) {
-        ctx.strokeStyle = "black";
+    var drawCircle = function (circle, color) {
+        if (color === void 0) { color = "black"; }
+        ctx.strokeStyle = color;
         ctx.beginPath();
         ctx.arc(circle.center.x, circle.center.y, circle.radius, 0, 2 * Math.PI);
         ctx.stroke();
@@ -261,6 +271,9 @@ define("game", ["require", "exports", "asteroids"], function (require, exports, 
         var dy = Math.min(Math.abs(y1 - y2), Math.abs(y1 - y2 + height), Math.abs(y1 - y2 - height));
         return Math.sqrt(dx * dx + dy * dy);
     };
+    var positiveModulo = function (x, n) {
+        return ((x % n) + n) % n;
+    };
     var repositionedEntity = function (entity, position) {
         var copy = __assign({}, entity);
         copy.position = position;
@@ -332,9 +345,6 @@ define("game", ["require", "exports", "asteroids"], function (require, exports, 
         };
         gameState.bullets.push(bullet);
     };
-    var positiveModulo = function (x, n) {
-        return ((x % n) + n) % n;
-    };
     // A bit discombobulated, but whatever
     var updateGameState = function (gameState, inputs) {
         var ship = gameState.ship, asteroids = gameState.asteroids, bullets = gameState.bullets;
@@ -364,34 +374,32 @@ define("game", ["require", "exports", "asteroids"], function (require, exports, 
         bullets.forEach(function (bullet) { return bullet.lifetime++; });
         // check for collisions
         var newAsteroids = [];
+        var xOffset = 0;
+        var yOffset = 0;
+        var near = nearBoundary(ship.position, { x: canvas.width, y: canvas.height });
+        if (near.includes(Boundaries.Top) || near.includes(Boundaries.Bottom)) {
+            yOffset = canvas.height / 2;
+        }
+        if (near.includes(Boundaries.Left) || near.includes(Boundaries.Right)) {
+            xOffset = canvas.width / 2;
+        }
         asteroids.forEach(function (asteroid) {
-            var xOffset = 0;
-            var yOffset = 0;
-            var near = nearBoundary(asteroid.position, { x: canvas.width, y: canvas.height });
-            if (near.includes(Boundaries.Top) || near.includes(Boundaries.Bottom)) {
-                yOffset = canvas.height / 2;
-            }
-            if (near.includes(Boundaries.Left) || near.includes(Boundaries.Right)) {
-                xOffset = canvas.width / 2;
-            }
             var tri = shipTriangle(ship).map(function (_a) {
                 var x = _a.x, y = _a.y;
-                return ({ x: positiveModulo((x + xOffset), canvas.width), y: positiveModulo((y + yOffset), canvas.height) });
+                return ({ x: positiveModulo(x + xOffset, canvas.width), y: positiveModulo(y + yOffset, canvas.height) });
             });
             if (toroidalDistance(asteroid.position, ship.position, { x: canvas.width, y: canvas.height }) < 100 &&
                 isCircleIntersectingOrInsideTriangle(tri, {
-                    center: { x: positiveModulo((asteroid.position.x + xOffset), canvas.width), y: positiveModulo((asteroid.position.y + yOffset), canvas.height) },
+                    center: { x: positiveModulo(asteroid.position.x + xOffset, canvas.width), y: positiveModulo(asteroid.position.y + yOffset, canvas.height) },
                     radius: asteroid.radius,
                 })) {
                 gameState.alive = false;
             }
             bullets.forEach(function (bullet) {
-                if (asteroid.radius > 0 &&
-                    bullet.lifetime < 100 &&
-                    toroidalDistance(asteroid.position, bullet.position, { x: canvas.width, y: canvas.height }) < asteroid.radius) {
+                if (asteroid.radius > 0 && bullet.lifetime < 100 && toroidalDistance(asteroid.position, bullet.position, { x: canvas.width, y: canvas.height }) < asteroid.radius) {
                     gameState.score++;
                     var radius = asteroid.radius - 5;
-                    var heading = { x: asteroid.heading.x + bullet.heading.x * 4 / radius, y: asteroid.heading.y + bullet.heading.y * 4 / radius };
+                    var heading = { x: asteroid.heading.x + (bullet.heading.x * 4) / radius, y: asteroid.heading.y + (bullet.heading.y * 4) / radius };
                     if (radius > 0) {
                         var a = {
                             heading: __assign({}, heading),
@@ -433,9 +441,8 @@ define("game", ["require", "exports", "asteroids"], function (require, exports, 
     var drawEverything = function (gameState) {
         var e_1, _a;
         clearCanvas();
-        var ship = gameState.ship, asteroids = gameState.asteroids, bullets = gameState.bullets;
         try {
-            for (var _b = __values(allEquivalences(ship, { x: canvas.width, y: canvas.height })), _c = _b.next(); !_c.done; _c = _b.next()) {
+            for (var _b = __values(allEquivalences(gameState.ship, { x: canvas.width, y: canvas.height })), _c = _b.next(); !_c.done; _c = _b.next()) {
                 var shipInstance = _c.value;
                 drawTriangle(shipTriangle(shipInstance));
             }
@@ -452,7 +459,7 @@ define("game", ["require", "exports", "asteroids"], function (require, exports, 
             try {
                 for (var _b = __values(allEquivalences(asteroid, { x: canvas.width, y: canvas.height })), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var asteroidInstance = _c.value;
-                    drawCircle({ center: asteroidInstance.position, radius: asteroid.radius });
+                    drawCircle({ center: asteroidInstance.position, radius: asteroid.radius }, asteroidInstance.highlighted ? "red" : "black");
                 }
             }
             catch (e_2_1) { e_2 = { error: e_2_1 }; }
@@ -480,12 +487,104 @@ define("game", ["require", "exports", "asteroids"], function (require, exports, 
             }
         });
     };
+    // NEAT stuff
+    // There are so many arbitrary decisions in this section
+    var positionDelta = function (a, b, canvasSize) {
+        var minX = Math.min(a.x, b.x);
+        var maxX = Math.max(a.x, b.x);
+        var minY = Math.min(a.y, b.y);
+        var maxY = Math.max(a.y, b.y);
+        var directX = maxX - minX;
+        var directY = maxY - minY;
+        var wrapX = directX - canvasSize.x;
+        var wrapY = directY - canvasSize.y;
+        var x = Math.abs(wrapX) < Math.abs(directX) ? wrapX : directX;
+        var y = Math.abs(wrapY) < Math.abs(directY) ? wrapY : directY;
+        return { x: x, y: y };
+    };
+    // model parameters
+    var closestCount = 5;
+    var speedAdjustedCount = 5;
+    var stateSpace = function (gameState) {
+        var ship = gameState.ship, asteroids = gameState.asteroids;
+        var shipTheta = Math.atan2(ship.heading.y, ship.heading.x);
+        var closestAsteroids = new Array(5).fill({ distance: Infinity, data: { velocity: 0, theta: 0, distance: 0, phi: 0, asteroid: null } });
+        // I may want to have an additional field for the danger value
+        var dangerAsteroids = new Array(5).fill({ danger: 0, data: { velocity: 0, theta: 0, distance: 0, phi: 0, asteroid: null } });
+        var nextShipPosition = {
+            x: positiveModulo(ship.position.x + ship.heading.x * ship.speed, canvas.width),
+            y: positiveModulo(ship.position.y + ship.heading.y * ship.speed, canvas.height),
+        };
+        asteroids.forEach(function (asteroid) {
+            var _a = positionDelta(ship.position, asteroid.position, { x: canvas.width, y: canvas.height }), x = _a.x, y = _a.y;
+            var distance = Math.sqrt(x * x + y * y);
+            var phi = Math.atan2(asteroid.heading.y, asteroid.heading.x) - shipTheta;
+            if (phi > Math.PI) {
+                phi -= 2 * Math.PI;
+            }
+            else if (phi < -Math.PI) {
+                phi += 2 * Math.PI;
+            }
+            var theta = Math.atan2(y, x);
+            var velocityDifference = subtractPoints(scalePoint(asteroid.heading, asteroid.speed), scalePoint(ship.heading, ship.speed));
+            var velocity = Math.sqrt(velocityDifference.x * velocityDifference.x + velocityDifference.y * velocityDifference.y);
+            for (var i = 0; i < closestAsteroids.length; i++) {
+                if (distance < closestAsteroids[i].distance) {
+                    closestAsteroids.splice(i, 0, { distance: distance, data: { velocity: velocity, theta: theta, distance: distance, phi: phi, asteroid: asteroid } });
+                    asteroid.highlighted = true;
+                    var ast = closestAsteroids.pop().data.asteroid;
+                    if (ast) {
+                        ast.highlighted = false;
+                    }
+                    break;
+                }
+            }
+            var nextAsteroidPosition = {
+                x: positiveModulo(asteroid.position.x + asteroid.heading.x * asteroid.speed, canvas.width),
+                y: positiveModulo(asteroid.position.y + asteroid.heading.y * asteroid.speed, canvas.height),
+            };
+            var _b = positionDelta(nextShipPosition, nextAsteroidPosition, { x: canvas.width, y: canvas.height }), nextX = _b.x, nextY = _b.y;
+            var nextDistance = Math.sqrt(nextX * nextX + nextY * nextY);
+            // This is attempting to capture the idea of asteroids moving towards the ship that are nearby
+            // dimensionally danger is time^-1 (distance differential over distance)
+            // I chose this because it has good numerical stability
+            var danger = (distance - nextDistance) / distance;
+            for (var i = 0; i < dangerAsteroids.length; i++) {
+                if (danger > 0 && danger > dangerAsteroids[i].danger) {
+                    dangerAsteroids.splice(i, 0, { danger: danger, data: { velocity: velocity, theta: theta, distance: distance, phi: phi, asteroid: asteroid } });
+                    asteroid.highlighted = true;
+                    var ast = dangerAsteroids.pop().data.asteroid;
+                    if (ast) {
+                        ast.highlighted = false;
+                    }
+                    break;
+                }
+            }
+        });
+        // Idk the best way to show that the data is empty, I am using negative velocities
+        return closestAsteroids
+            .map(function (_a) {
+            var distance = _a.distance, data = _a.data;
+            if (distance === Infinity) {
+                return { velocity: -2, deltaTheta: 0, distance: 0 };
+            }
+            return data;
+        })
+            .concat(dangerAsteroids.map(function (_a) {
+            var danger = _a.danger, data = _a.data;
+            if (danger === 0) {
+                return { velocity: -2, deltaTheta: 0, distance: 0 };
+            }
+            return data;
+        }));
+    };
     // temporary test code
     var tester = function () {
         setupCanvas();
         var state = initialState();
         // We load the asteroids the same every time for now
         state.asteroids = asteroids_1.default;
+        state.asteroids.forEach(function (asteroid) { return (asteroid.heading = normalize(asteroid.heading)); });
         var inputs = {
             left: false,
             right: false,
@@ -527,11 +626,21 @@ define("game", ["require", "exports", "asteroids"], function (require, exports, 
                 inputs.space = false;
             }
         };
+        var frame = 0;
         var loop = function () {
             updateGameState(state, inputs);
             if (!state.alive) {
                 console.log("You died!");
                 return;
+            }
+            if (state.asteroids.length === 0) {
+                console.log("You won!");
+                return;
+            }
+            var space = stateSpace(state);
+            frame++;
+            if (frame % 20 === 0) {
+                console.log(space);
             }
             drawEverything(state);
             requestAnimationFrame(loop);

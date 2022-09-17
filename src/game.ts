@@ -25,6 +25,18 @@ const pointsToLine = (p1: Point, p2: Point) => {
   return { norm, dist };
 };
 
+const scalePoint = (point: Point, scale: number) => {
+  return { x: point.x * scale, y: point.y * scale };
+};
+
+const dot = (p1: Point, p2: Point) => {
+  return p1.x * p2.x + p1.y * p2.y;
+};
+
+const subtractPoints = (p1: Point, p2: Point) => {
+  return { x: p1.x - p2.x, y: p1.y - p2.y };
+};
+
 const linesFromTriangle = (triangle: Triangle) => {
   const [p1, p2, p3] = triangle;
   return [pointsToLine(p1, p2), pointsToLine(p2, p3), pointsToLine(p3, p1)];
@@ -125,8 +137,8 @@ const drawPoint = (point: Point) => {
   ctx.fill();
 };
 
-const drawCircle = (circle: Circle) => {
-  ctx.strokeStyle = "black";
+const drawCircle = (circle: Circle, color = "black") => {
+  ctx.strokeStyle = color;
   ctx.beginPath();
   ctx.arc(circle.center.x, circle.center.y, circle.radius, 0, 2 * Math.PI);
   ctx.stroke();
@@ -231,13 +243,17 @@ const toroidalDistance = (point1: Point, point2: Point, canvasSize: Point) => {
   return Math.sqrt(dx * dx + dy * dy);
 };
 
+const positiveModulo = (x: number, n: number) => {
+  return ((x % n) + n) % n;
+};
+
 // The actual game
 
 type Entity = { heading: Point; position: Point; speed: number };
 
 type Ship = Entity & { framesSinceFired: number };
 
-type Asteroid = Entity & { radius: number };
+type Asteroid = Entity & { radius: number; highlighted?: boolean };
 
 type Bullet = Entity & { lifetime: number };
 
@@ -248,6 +264,8 @@ type GameState = {
   score: number;
   alive: boolean;
 };
+
+const bulletMaxLifetime = 60;
 
 const repositionedEntity = (entity: Entity, position: Point) => {
   const copy = { ...entity };
@@ -337,10 +355,6 @@ type InputState = {
   space: boolean;
 };
 
-const positiveModulo = (x: number, n: number) => {
-  return ((x % n) + n) % n;
-};
-
 // A bit discombobulated, but whatever
 const updateGameState = (gameState: GameState, inputs: InputState) => {
   const { ship, asteroids, bullets } = gameState;
@@ -373,35 +387,34 @@ const updateGameState = (gameState: GameState, inputs: InputState) => {
   bullets.forEach((bullet) => bullet.lifetime++);
   // check for collisions
   const newAsteroids = [];
+
+  let xOffset = 0;
+  let yOffset = 0;
+  const near = nearBoundary(ship.position, { x: canvas.width, y: canvas.height });
+  if (near.includes(Boundaries.Top) || near.includes(Boundaries.Bottom)) {
+    yOffset = canvas.height / 2;
+  }
+  if (near.includes(Boundaries.Left) || near.includes(Boundaries.Right)) {
+    xOffset = canvas.width / 2;
+  }
+
   asteroids.forEach((asteroid) => {
-    let xOffset = 0;
-    let yOffset = 0;
-    const near = nearBoundary(asteroid.position, { x: canvas.width, y: canvas.height });
-    if (near.includes(Boundaries.Top) || near.includes(Boundaries.Bottom)) {
-      yOffset = canvas.height / 2;
-    }
-    if (near.includes(Boundaries.Left) || near.includes(Boundaries.Right)) {
-      xOffset = canvas.width / 2;
-    }
-    const tri = shipTriangle(ship).map(({ x, y }) => ({ x: positiveModulo((x + xOffset), canvas.width), y: positiveModulo((y + yOffset), canvas.height) })) as Triangle;
+    const tri = shipTriangle(ship).map(({ x, y }) => ({ x: positiveModulo(x + xOffset, canvas.width), y: positiveModulo(y + yOffset, canvas.height) })) as Triangle;
     if (
       toroidalDistance(asteroid.position, ship.position, { x: canvas.width, y: canvas.height }) < 100 &&
       isCircleIntersectingOrInsideTriangle(tri, {
-        center: { x: positiveModulo((asteroid.position.x + xOffset), canvas.width), y: positiveModulo((asteroid.position.y + yOffset), canvas.height) },
+        center: { x: positiveModulo(asteroid.position.x + xOffset, canvas.width), y: positiveModulo(asteroid.position.y + yOffset, canvas.height) },
         radius: asteroid.radius,
       })
     ) {
       gameState.alive = false;
     }
+
     bullets.forEach((bullet) => {
-      if (
-        asteroid.radius > 0 &&
-        bullet.lifetime < 100 &&
-        toroidalDistance(asteroid.position, bullet.position, { x: canvas.width, y: canvas.height }) < asteroid.radius
-      ) {
+      if (asteroid.radius > 0 && bullet.lifetime < bulletMaxLifetime && toroidalDistance(asteroid.position, bullet.position, { x: canvas.width, y: canvas.height }) < asteroid.radius) {
         gameState.score++;
         const radius = asteroid.radius - 5;
-        const heading = { x: asteroid.heading.x + bullet.heading.x * 4 / radius, y: asteroid.heading.y + bullet.heading.y * 4 / radius }
+        const heading = { x: asteroid.heading.x + (bullet.heading.x * 4) / radius, y: asteroid.heading.y + (bullet.heading.y * 4) / radius };
         if (radius > 0) {
           const a = {
             heading: { ...heading },
@@ -421,11 +434,11 @@ const updateGameState = (gameState: GameState, inputs: InputState) => {
           asteroids.push(b);
         }
         asteroid.radius = 0;
-        bullet.lifetime = 100;
+        bullet.lifetime = bulletMaxLifetime;
       }
     });
   });
-  gameState.bullets = gameState.bullets.filter((bullet) => bullet.lifetime < 100);
+  gameState.bullets = gameState.bullets.filter((bullet) => bullet.lifetime < bulletMaxLifetime);
   // remove asteroids that have been destroyed
   gameState.asteroids = gameState.asteroids.filter((asteroid) => asteroid.radius > 0);
   // wrap everything
@@ -443,14 +456,13 @@ const updateGameState = (gameState: GameState, inputs: InputState) => {
 
 const drawEverything = (gameState: GameState) => {
   clearCanvas();
-  const { ship, asteroids, bullets } = gameState;
-  for (const shipInstance of allEquivalences(ship, { x: canvas.width, y: canvas.height })) {
+  for (const shipInstance of allEquivalences(gameState.ship, { x: canvas.width, y: canvas.height })) {
     drawTriangle(shipTriangle(shipInstance));
   }
 
   gameState.asteroids.forEach((asteroid) => {
     for (const asteroidInstance of allEquivalences(asteroid, { x: canvas.width, y: canvas.height })) {
-      drawCircle({ center: asteroidInstance.position, radius: asteroid.radius });
+      drawCircle({ center: asteroidInstance.position, radius: asteroid.radius }, (asteroidInstance as Asteroid).highlighted ? "red" : "black");
     }
   });
   gameState.bullets.forEach((bullet) => {
@@ -458,6 +470,120 @@ const drawEverything = (gameState: GameState) => {
       drawPoint(bulletInstance.position);
     }
   });
+};
+
+// NEAT stuff
+
+// There are so many arbitrary decisions in this section
+
+const positionDelta = (a: Point, b: Point, canvasSize: Point) => {
+  const minX = Math.min(a.x, b.x);
+  const maxX = Math.max(a.x, b.x);
+  const minY = Math.min(a.y, b.y);
+  const maxY = Math.max(a.y, b.y);
+  const directX = maxX - minX;
+  const directY = maxY - minY;
+  const wrapX = directX - canvasSize.x;
+  const wrapY = directY - canvasSize.y;
+  const x = Math.abs(wrapX) < Math.abs(directX) ? wrapX : directX;
+  const y = Math.abs(wrapY) < Math.abs(directY) ? wrapY : directY;
+  return { x, y };
+};
+
+// model parameters
+const closestCount = 5;
+const speedAdjustedCount = 5;
+
+// polar coordinates with the frame of reference of the ship
+type AsteroidData = { velocity: number; theta: number; distance: number; phi: number; asteroid: Asteroid };
+
+// this does not modify the game state except for highlighting the asteroids that it is returning data for
+const stateSpace = (gameState: GameState) => {
+  const { ship, asteroids } = gameState;
+  const shipTheta = Math.atan2(ship.heading.y, ship.heading.x);
+
+  const closestAsteroids: { distance: number; data: AsteroidData }[] = new Array(5).fill({ distance: Infinity, data: { velocity: 0, theta: 0, distance: 0, phi: 0, asteroid: null } });
+  // I may want to have an additional field for the danger value
+  const dangerAsteroids: { danger: number; data: AsteroidData }[] = new Array(5).fill({ danger: 0, data: { velocity: 0, theta: 0, distance: 0, phi: 0, asteroid: null } });
+
+  const nextShipPosition = {
+    x: positiveModulo(ship.position.x + ship.heading.x * ship.speed, canvas.width),
+    y: positiveModulo(ship.position.y + ship.heading.y * ship.speed, canvas.height),
+  };
+
+  asteroids.forEach((asteroid) => {
+    const { x, y } = positionDelta(ship.position, asteroid.position, { x: canvas.width, y: canvas.height });
+    const distance = Math.sqrt(x * x + y * y);
+
+    let phi = Math.atan2(asteroid.heading.y, asteroid.heading.x) - shipTheta;
+    if (phi > Math.PI) {
+      phi -= 2 * Math.PI;
+    } else if (phi < -Math.PI) {
+      phi += 2 * Math.PI;
+    }
+
+    const theta = Math.atan2(y, x);
+
+    const velocityDifference = subtractPoints(scalePoint(asteroid.heading, asteroid.speed), scalePoint(ship.heading, ship.speed));
+    const velocity = Math.sqrt(velocityDifference.x * velocityDifference.x + velocityDifference.y * velocityDifference.y);
+
+    for (let i = 0; i < closestAsteroids.length; i++) {
+      if (distance < closestAsteroids[i].distance) {
+        closestAsteroids.splice(i, 0, { distance, data: { velocity, theta, distance, phi, asteroid } });
+        asteroid.highlighted = true;
+        const {
+          data: { asteroid: ast },
+        } = closestAsteroids.pop();
+        if (ast) {
+          ast.highlighted = false;
+        }
+        break;
+      }
+    }
+
+    const nextAsteroidPosition = {
+      x: positiveModulo(asteroid.position.x + asteroid.heading.x * asteroid.speed, canvas.width),
+      y: positiveModulo(asteroid.position.y + asteroid.heading.y * asteroid.speed, canvas.height),
+    };
+
+    const { x: nextX, y: nextY } = positionDelta(nextShipPosition, nextAsteroidPosition, { x: canvas.width, y: canvas.height });
+    const nextDistance = Math.sqrt(nextX * nextX + nextY * nextY);
+    // This is attempting to capture the idea of asteroids moving towards the ship that are nearby
+    // dimensionally danger is time^-1 (distance differential over distance)
+    // I chose this because it has good numerical stability
+    const danger = (distance - nextDistance) / distance;
+
+    for (let i = 0; i < dangerAsteroids.length; i++) {
+      if (danger > 0 && danger > dangerAsteroids[i].danger) {
+        dangerAsteroids.splice(i, 0, { danger, data: { velocity, theta, distance, phi, asteroid } });
+        asteroid.highlighted = true;
+        const {
+          data: { asteroid: ast },
+        } = dangerAsteroids.pop();
+        if (ast) {
+          ast.highlighted = false;
+        }
+        break;
+      }
+    }
+  });
+
+  // Idk the best way to show that the data is empty, I am using negative velocities
+  return closestAsteroids
+    .map(({ distance, data }) => {
+      if (distance === Infinity) {
+        return { velocity: -2, deltaTheta: 0, distance: 0 };
+      }
+      return data;
+    })
+    .concat(
+      dangerAsteroids.map(({ danger, data }) => {
+        if (danger === 0) {
+          return { velocity: -2, deltaTheta: 0, distance: 0 };
+        }
+        return data;
+      })
+    );
 };
 
 // temporary test code
@@ -469,6 +595,7 @@ const tester = () => {
 
   // We load the asteroids the same every time for now
   state.asteroids = asteroids;
+  state.asteroids.forEach((asteroid) => (asteroid.heading = normalize(asteroid.heading)));
 
   const inputs: InputState = {
     left: false,
@@ -514,12 +641,25 @@ const tester = () => {
     }
   };
 
+  let frame = 0;
+
   const loop = () => {
     updateGameState(state, inputs);
     if (!state.alive) {
       console.log("You died!");
       return;
     }
+    if (state.asteroids.length === 0) {
+      console.log("You won!");
+      return;
+    }
+
+    const space = stateSpace(state);
+    frame++;
+    if (frame % 20 === 0) {
+      console.log(space);
+    }
+
     drawEverything(state);
     requestAnimationFrame(loop);
   };
