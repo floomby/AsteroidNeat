@@ -1,4 +1,4 @@
-import { Domain, progenerate, printGenome, computePlan, printPlan, compute } from "./neat";
+import { Domain, progenerate, printGenome, computePlan, printPlan, compute, topologicalInsertionMutation } from "./neat";
 
 import { tester, tester2 } from "./game";
 

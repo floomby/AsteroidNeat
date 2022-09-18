@@ -1,5 +1,5 @@
-import asteroids from "./asteroids";
-import { Domain, progenerate, printGenome, ComputePlan, computePlan, printPlan, compute } from "./neat";
+// import asteroids from "./asteroids";
+import { Domain, progenerate, printGenome, ComputePlan, computePlan, printPlan, compute, mutateWeights, insertEdgeMutation, topologicalInsertionMutation } from "./neat";
 
 // Basic geometry stuff
 
@@ -248,6 +248,27 @@ const positiveModulo = (x: number, n: number) => {
   return ((x % n) + n) % n;
 };
 
+// Asteroids stuff
+
+type AsteroidInit = { heading: Point; position: Point; speed: number; radius: number };
+
+const randomAsteroids = (count: number) => {
+  console.assert(canvas !== undefined, "canvas not initialized");
+  const asteroids: AsteroidInit[] = [];
+  for (let i = 0; i < count; i++) {
+    const heading = { x: Math.random() * 2 - 1, y: Math.random() * 2 - 1 };
+    const position = { x: Math.random() * canvas.width, y: Math.random() * canvas.height };
+    const speed = Math.random() * 2 + 1;
+    const radius = 20;
+    if (toroidalDistance(position, { x: canvas.width / 2, y: canvas.height / 2 }, { x: canvas.width, y: canvas.height }) < 135) {
+      i--;
+      continue;
+    }
+    asteroids.push({ heading, position, speed, radius });
+  }
+  return asteroids;
+};
+
 // The actual game
 
 type Entity = { heading: Point; position: Point; speed: number };
@@ -266,7 +287,7 @@ type GameState = {
   alive: boolean;
 };
 
-const bulletMaxLifetime = 60;
+const bulletMaxLifetime = 40;
 
 const repositionedEntity = (entity: Entity, position: Point) => {
   const copy = { ...entity };
@@ -288,7 +309,7 @@ const initialState = () => {
       heading: { x: 0, y: -1 },
       position: { x: canvas.width / 2, y: canvas.height / 2 },
       speed: 0,
-      framesSinceFired: Infinity,
+      framesSinceFired: 11,
     },
     asteroids: [],
     bullets: [],
@@ -492,20 +513,23 @@ const positionDelta = (a: Point, b: Point, canvasSize: Point) => {
 };
 
 // model parameters
-const closestCount = 5;
-const dangerCount = 5;
+const closestCount = 7;
+const dangerCount = 7;
 
 // polar coordinates with the frame of reference of the ship
-type AsteroidData = { velocity: number; theta: number; distance: number; phi: number; asteroid: Asteroid };
+type AsteroidData = { velocity: number; theta: number; distance: number; phi: number; radius: number; asteroid: Asteroid };
 
 // this does not modify the game state except for highlighting the asteroids that it is returning data for
 const stateSpace = (gameState: GameState) => {
   const { ship, asteroids } = gameState;
   const shipTheta = Math.atan2(ship.heading.y, ship.heading.x);
 
-  const closestAsteroids: { distance: number; data: AsteroidData }[] = new Array(closestCount).fill({ distance: Infinity, data: { velocity: 0, theta: 0, distance: 0, phi: 0, asteroid: null } });
+  const closestAsteroids: { distance: number; data: AsteroidData }[] = new Array(closestCount).fill({
+    distance: Infinity,
+    data: { velocity: 0, theta: 0, distance: 0, phi: 0, radius: 0, asteroid: null },
+  });
   // I may want to have an additional field for the danger value
-  const dangerAsteroids: { danger: number; data: AsteroidData }[] = new Array(dangerCount).fill({ danger: 0, data: { velocity: 0, theta: 0, distance: 0, phi: 0, asteroid: null } });
+  const dangerAsteroids: { danger: number; data: AsteroidData }[] = new Array(dangerCount).fill({ danger: 0, data: { velocity: 0, theta: 0, distance: 0, phi: 0, radius: 0, asteroid: null } });
 
   const nextShipPosition = {
     x: positiveModulo(ship.position.x + ship.heading.x * ship.speed, canvas.width),
@@ -530,7 +554,7 @@ const stateSpace = (gameState: GameState) => {
 
     for (let i = 0; i < closestAsteroids.length; i++) {
       if (distance < closestAsteroids[i].distance) {
-        closestAsteroids.splice(i, 0, { distance, data: { velocity, theta, distance, phi, asteroid } });
+        closestAsteroids.splice(i, 0, { distance, data: { velocity, theta, distance, phi, radius: asteroid.radius, asteroid } });
         asteroid.highlighted = true;
         const {
           data: { asteroid: ast },
@@ -556,7 +580,7 @@ const stateSpace = (gameState: GameState) => {
 
     for (let i = 0; i < dangerAsteroids.length; i++) {
       if (danger > 0 && danger > dangerAsteroids[i].danger) {
-        dangerAsteroids.splice(i, 0, { danger, data: { velocity, theta, distance, phi, asteroid } });
+        dangerAsteroids.splice(i, 0, { danger, data: { velocity, theta, distance, phi, radius: asteroid.radius, asteroid } });
         asteroid.highlighted = true;
         const {
           data: { asteroid: ast },
@@ -573,23 +597,23 @@ const stateSpace = (gameState: GameState) => {
   return closestAsteroids
     .map(({ distance, data }) => {
       if (distance === Infinity) {
-        return { velocity: -2, deltaTheta: 0, distance: 0 };
+        return { velocity: 0, deltaTheta: 0, distance: 0, radius: 0 };
       }
       return data;
     })
     .concat(
       dangerAsteroids.map(({ danger, data }) => {
         if (danger === 0) {
-          return { velocity: -2, deltaTheta: 0, distance: 0 };
+          return { velocity: 0, deltaTheta: 0, distance: 0, radius: 0 };
         }
         return data;
       })
     ) as AsteroidData[];
 };
 
-// hook up the nn to the game for
+// hook up the nn to the game
 
-const domain = { inputs: (closestCount + dangerCount) * 4 + 1, outputs: 5 };
+const domain = { inputs: (closestCount + dangerCount) * 5 + 2, outputs: 5 };
 
 // This code is wrong but I am writing and testing stuff incrementally
 const setupNetwork = (count: number) => {
@@ -597,22 +621,31 @@ const setupNetwork = (count: number) => {
   return { plans: genomes.map((genome) => computePlan(genome)), innovation };
 };
 
-const runStep = (data: AsteroidData[], plan: ComputePlan) => {
+const runStep = (data: AsteroidData[], plan: ComputePlan, framesSinceFired: number) => {
   const inputs: number[] = new Array(domain.inputs);
   for (let i = 0; i < closestCount + dangerCount; i++) {
-    const { velocity, theta, distance, phi } = data[i];
-    inputs[i * 4] = velocity;
-    inputs[i * 4 + 1] = theta;
-    inputs[i * 4 + 2] = distance;
-    inputs[i * 4 + 3] = phi;
+    const { velocity, theta, distance, phi, radius } = data[i];
+    inputs[i * 5] = velocity;
+    inputs[i * 5 + 1] = theta;
+    inputs[i * 5 + 2] = distance;
+    inputs[i * 5 + 3] = phi;
+    inputs[i * 5 + 4] = radius;
   }
+  inputs[inputs.length - 2] = framesSinceFired;
   inputs[inputs.length - 1] = 1;
   return compute(plan, inputs);
 };
 
+let asteroids: AsteroidInit[] = [];
+
 const asteroidsCopy = () => {
   return asteroids.map((asteroid) => {
-    const { position: { ...position }, heading: { ...heading }, speed, radius } = asteroid;
+    const {
+      position: { ...position },
+      heading: { ...heading },
+      speed,
+      radius,
+    } = asteroid;
     return { position: { ...position }, heading: { ...heading }, speed, radius };
   });
 };
@@ -653,7 +686,7 @@ const runSimulation = (plan: ComputePlan) => {
     //   console.log(space);
     // }
 
-    const outputs = runStep(space, plan);
+    const outputs = runStep(space, plan, state.ship.framesSinceFired);
     const [left, right, up, down, spacebar] = outputs;
     inputs.left = left > 0.5;
     inputs.right = right > 0.5;
@@ -662,9 +695,12 @@ const runSimulation = (plan: ComputePlan) => {
     inputs.space = spacebar > 0.5;
   }
 
-  console.log(`Simulation over with score ${state.score} on frame ${frame}`);
-  return frame / 50 + state.score * 100;
+  // console.log(`Simulation over with score ${state.score} on frame ${frame}`);
+  return frame / 40 + state.score * 60;
 };
+
+let displaying = false;
+let afterDisplaying: () => void = () => {};
 
 const showSimulation = (plan: ComputePlan) => {
   if (!canvas) {
@@ -688,18 +724,21 @@ const showSimulation = (plan: ComputePlan) => {
   const loop = () => {
     if (!state.alive) {
       console.log(`Simulation over with score ${state.score} on frame ${frame}`);
+      displaying = false;
+      afterDisplaying();
       return;
     }
     updateGameState(state, inputs);
     if (state.asteroids.length === 0) {
       console.log("It won!");
+      displaying = false;
       throw new Error("It won!");
     }
 
     const space = stateSpace(state);
     frame++;
 
-    const outputs = runStep(space, plan);
+    const outputs = runStep(space, plan, state.ship.framesSinceFired);
     const [left, right, up, down, spacebar] = outputs;
     inputs.left = left > 0.5;
     inputs.right = right > 0.5;
@@ -711,17 +750,96 @@ const showSimulation = (plan: ComputePlan) => {
     requestAnimationFrame(loop);
   };
 
+  displaying = true;
   loop();
 };
 
+const averageOverRunsCount = 10;
+
+const bestPerRound = 10;
+const copiesPerRound = 5;
+
 const tester2 = () => {
-  console.log("Running 15 simulations");
-  const { plans, innovation } = setupNetwork(15);
-  const fitnesses = plans.map((plan) => ({ fitness: runSimulation(plan), plan }));
-  const sorted = fitnesses.sort((a, b) => b.fitness - a.fitness);
-  const best = sorted[0];
+  setupCanvas();
+  asteroids = randomAsteroids(15);
+
+  let { plans, innovation } = setupNetwork(bestPerRound * copiesPerRound);
+  let fitnesses = plans.map((plan) => ({ fitness: runSimulation(plan), plan }));
+  let sorted = fitnesses.sort((a, b) => b.fitness - a.fitness);
+  let best = sorted[0];
   console.log("Best fitness", best.fitness);
   console.log(best);
+
+  let iteration = 1;
+  const doIteration = () => {
+    if (iteration % 15 === 0) {
+      console.log(`Iteration ${iteration} - TOPOLOGICAL MUTATIONS`);
+
+      const bestResults = sorted.slice(0, bestPerRound);
+      plans = [];
+      for (let j = 0; j < bestResults.length; j++) {
+        for (let i = 0; i < copiesPerRound; i++) {
+          if (i === 0) {
+            plans.push(bestResults[j].plan);
+          } else {
+            // console.log("Mutating");
+            const { genome, innovationIndex } = topologicalInsertionMutation(bestResults[j].plan.genome, innovation);
+            // printGenome(genome);
+            innovation = innovationIndex;
+            plans.push(computePlan(genome));
+          }
+        }
+      }
+
+      let averages = new Array(plans.length).fill(0);
+      for (let i = 0; i < averageOverRunsCount; i++) {
+        asteroids = randomAsteroids(15);
+        for (let j = 0; j < plans.length; j++) {
+          averages[j] += runSimulation(plans[j]);
+        }
+      }
+      averages = averages.map((fitness) => fitness / averageOverRunsCount);
+      sorted = averages.map((fitness, i) => ({ fitness, plan: plans[i] })).sort((a, b) => b.fitness - a.fitness);
+      console.log(sorted);
+    } else {
+      const bestResults = sorted.slice(0, bestPerRound);
+      plans = [];
+      for (let j = 0; j < bestResults.length; j++) {
+        for (let i = 0; i < copiesPerRound; i++) {
+          if (i === 0) {
+            plans.push(bestResults[j].plan);
+          } else {
+            plans.push(computePlan(mutateWeights(bestResults[j].plan.genome)));
+          }
+        }
+      }
+
+      let averages = new Array(plans.length).fill(0);
+      for (let i = 0; i < averageOverRunsCount; i++) {
+        asteroids = randomAsteroids(15);
+        for (let j = 0; j < plans.length; j++) {
+          averages[j] += runSimulation(plans[j]);
+        }
+      }
+      averages = averages.map((fitness) => fitness / averageOverRunsCount);
+      sorted = averages.map((fitness, i) => ({ fitness, plan: plans[i] })).sort((a, b) => b.fitness - a.fitness);
+      console.log(sorted);
+    }
+    iteration++;
+
+    best = sorted[0];
+    console.log("Best fitness", best.fitness);
+    // console.log(best);
+
+    if (iteration % 21 === 0) {
+      afterDisplaying = doIteration;
+      showSimulation(best.plan);
+    } else {
+      doIteration();
+    }
+  };
+
+  afterDisplaying = doIteration;
   showSimulation(best.plan);
 };
 
