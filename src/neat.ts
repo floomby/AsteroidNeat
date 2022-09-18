@@ -52,11 +52,7 @@ const crossover = (a: Genome, b: Genome): Genome => {
   };
 };
 
-const insertEdgeMutation = (
-  genome: Genome,
-  edgeIndex: number,
-  innovation: number
-): { genome: Genome; innovationIndex: number } => {
+const insertEdgeMutation = (genome: Genome, edgeIndex: number, innovation: number): { genome: Genome; innovationIndex: number } => {
   const edges = genome.edges.map((edge) => ({ ...edge }));
   const edge = edges[edgeIndex];
   console.assert(edge.enabled);
@@ -85,18 +81,11 @@ const insertEdgeMutation = (
   };
 };
 
-const connectMutation = (
-  genome: Genome,
-  innovation: number,
-  from: number,
-  to: number
-): { genome: Genome; innovationIndex: number } => {
+const connectMutation = (genome: Genome, innovation: number, from: number, to: number): { genome: Genome; innovationIndex: number } => {
   console.assert(to !== from);
   console.assert(to < genome.nodeCount);
   console.assert(from < genome.nodeCount);
-  const edgeCheck = genome.edges.find(
-    (edge) => edge.from === from && edge.to === to
-  );
+  const edgeCheck = genome.edges.find((edge) => edge.from === from && edge.to === to);
   if (edgeCheck) {
     return { genome, innovationIndex: innovation };
   }
@@ -121,11 +110,7 @@ const connectMutation = (
 const printGenome = (genome: Genome): void => {
   console.log(`Genome: ${genome.nodeCount} nodes`);
   for (const edge of genome.edges) {
-    console.log(
-      `Edge: ${edge.from} -> ${edge.to} (${edge.weight}) ${
-        edge.enabled ? "enabled" : "disabled"
-      } Innovation: ${edge.innovation}`
-    );
+    console.log(`Edge: ${edge.from} -> ${edge.to} (${edge.weight}) ${edge.enabled ? "enabled" : "disabled"} Innovation: ${edge.innovation}`);
   }
 };
 
@@ -157,9 +142,7 @@ const computePlan = (genome: Genome): ComputePlan => {
     }
     const deps = nodeDeps[node];
     if (!deps) {
-      throw new Error(
-        "Invalid topology found while building compute plan (non-input node has no inputs)"
-      );
+      throw new Error("Invalid topology found while building compute plan (non-input node has no inputs)");
     }
     for (const dep of deps) {
       computeNode(dep.from);
@@ -181,21 +164,15 @@ const printPlan = (plan: ComputeStep[]): void => {
       console.log(`Step: ${step}`);
       continue;
     }
-    console.log(
-      `Step: ${step.from} -> ${step.to} (${step.weight}) ${
-        step.enabled ? "enabled" : "disabled"
-      } Innovation: ${step.innovation}`
-    );
+    console.log(`Step: ${step.from} -> ${step.to} (${step.weight}) ${step.enabled ? "enabled" : "disabled"} Innovation: ${step.innovation}`);
   }
 };
 
 // Sigmoid activation function from the NEAT paper
 const activation = (x: number): number => 1 / (1 + Math.exp(-x));
 
-const compute = (
-  { plan, nodeCount }: ComputePlan,
-  inputs: number[]
-): number[] => {
+// This can be made more efficient by performing the plan in place on an existing array of the correct size
+const compute = ({ plan, nodeCount }: ComputePlan, inputs: number[]): number[] => {
   const nodes = new Array<number>(nodeCount).fill(0);
   for (let i = 0; i < inputs.length; i++) {
     nodes[i] = inputs[i];
@@ -227,10 +204,7 @@ const mutateWeights = (genome: Genome): Genome => {
   };
 };
 
-const progenerate = (
-  domain: Domain,
-  size: number
-): { genomes: Genome[]; innovation: number } => {
+const progenerate = (domain: Domain, size: number): { genomes: Genome[]; innovation: number } => {
   const genomes: Genome[] = [];
   let progenitor: Genome = {
     domain,
@@ -240,12 +214,7 @@ const progenerate = (
   let innovation = 0;
   for (let i = 0; i < domain.outputs; i++) {
     for (let j = 0; j < domain.inputs; j++) {
-      const { genome, innovationIndex } = connectMutation(
-        progenitor,
-        innovation,
-        j,
-        domain.inputs + i
-      );
+      const { genome, innovationIndex } = connectMutation(progenitor, innovation, j, domain.inputs + i);
       progenitor = genome;
       innovation = innovationIndex;
     }

@@ -1,13 +1,6 @@
-import {
-  Domain,
-  progenerate,
-  printGenome,
-  computePlan,
-  printPlan,
-  compute,
-} from "./neat";
+import { Domain, progenerate, printGenome, computePlan, printPlan, compute } from "./neat";
 
-import { tester } from "./game";
+import { tester, tester2 } from "./game";
 
 // const test = () => {
 //   const domain = { inputs: 3, outputs: 2 };
@@ -20,9 +13,10 @@ import { tester } from "./game";
 //   }
 // };
 
-if (document.readyState === "complete") {
-  tester();
-} else {
-  document.addEventListener("DOMContentLoaded", tester);
-}
+const toRun = tester2;
 
+if (document.readyState === "complete") {
+  toRun();
+} else {
+  document.addEventListener("DOMContentLoaded", toRun);
+}

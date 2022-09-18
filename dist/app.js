@@ -9,6 +9,28 @@ var __assign = (this && this.__assign) || function () {
     };
     return __assign.apply(this, arguments);
 };
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 var __read = (this && this.__read) || function (o, n) {
     var m = typeof Symbol === "function" && o[Symbol.iterator];
     if (!m) return o;
@@ -24,17 +46,6 @@ var __read = (this && this.__read) || function (o, n) {
         finally { if (e) throw e.error; }
     }
     return ar;
-};
-var __values = (this && this.__values) || function(o) {
-    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-    if (m) return m.call(o);
-    if (o && typeof o.length === "number") return {
-        next: function () {
-            if (o && i >= o.length) o = void 0;
-            return { value: o && o[i++], done: !o };
-        }
-    };
-    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -56,10 +67,319 @@ define("asteroids", ["require", "exports"], function (require, exports) {
         { heading: { x: 0.24977928600685595, y: -0.48351304373469217 }, position: { x: 679.2011628182141, y: 597.2789625771209 }, speed: 0.9449852402166208, radius: 20 },
     ];
 });
-define("game", ["require", "exports", "asteroids"], function (require, exports, asteroids_1) {
+// import assert from "assert";
+define("neat", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.tester = void 0;
+    exports.computePlan = exports.printPlan = exports.printGenome = exports.compute = exports.progenerate = void 0;
+    var crossover = function (a, b) {
+        var e_1, _a, e_2, _b, e_3, _c;
+        console.assert(a.domain.inputs === b.domain.inputs);
+        console.assert(a.domain.outputs === b.domain.outputs);
+        var innovations = new Set();
+        try {
+            for (var _d = __values(a.edges), _e = _d.next(); !_e.done; _e = _d.next()) {
+                var edge = _e.value;
+                innovations.add(edge.innovation);
+            }
+        }
+        catch (e_1_1) { e_1 = { error: e_1_1 }; }
+        finally {
+            try {
+                if (_e && !_e.done && (_a = _d.return)) _a.call(_d);
+            }
+            finally { if (e_1) throw e_1.error; }
+        }
+        try {
+            for (var _f = __values(b.edges), _g = _f.next(); !_g.done; _g = _f.next()) {
+                var edge = _g.value;
+                innovations.add(edge.innovation);
+            }
+        }
+        catch (e_2_1) { e_2 = { error: e_2_1 }; }
+        finally {
+            try {
+                if (_g && !_g.done && (_b = _f.return)) _b.call(_f);
+            }
+            finally { if (e_2) throw e_2.error; }
+        }
+        var edges = [];
+        var _loop_1 = function (innovation) {
+            var edgeA = a.edges.find(function (edge) { return edge.innovation === innovation; });
+            var edgeB = b.edges.find(function (edge) { return edge.innovation === innovation; });
+            if (!edgeA) {
+                edges.push(edgeB);
+                return "continue";
+            }
+            else if (!edgeB) {
+                edges.push(edgeA);
+                return "continue";
+            }
+            console.assert(edgeA.from === edgeB.from);
+            console.assert(edgeA.to === edgeB.to);
+            edges.push({
+                from: edgeA.from,
+                to: edgeA.to,
+                weight: Math.random() < 0.5 ? edgeA.weight : edgeB.weight,
+                innovation: innovation,
+                enabled: edgeA.enabled && edgeB.enabled,
+            });
+        };
+        try {
+            for (var innovations_1 = __values(innovations), innovations_1_1 = innovations_1.next(); !innovations_1_1.done; innovations_1_1 = innovations_1.next()) {
+                var innovation = innovations_1_1.value;
+                _loop_1(innovation);
+            }
+        }
+        catch (e_3_1) { e_3 = { error: e_3_1 }; }
+        finally {
+            try {
+                if (innovations_1_1 && !innovations_1_1.done && (_c = innovations_1.return)) _c.call(innovations_1);
+            }
+            finally { if (e_3) throw e_3.error; }
+        }
+        return {
+            domain: a.domain,
+            edges: edges,
+            nodeCount: Math.max(a.nodeCount, b.nodeCount),
+        };
+    };
+    var insertEdgeMutation = function (genome, edgeIndex, innovation) {
+        var edges = genome.edges.map(function (edge) { return (__assign({}, edge)); });
+        var edge = edges[edgeIndex];
+        console.assert(edge.enabled);
+        edge.enabled = false;
+        edges.push({
+            from: edge.from,
+            to: genome.nodeCount,
+            weight: Math.random() * 2 - 1,
+            innovation: innovation,
+            enabled: true,
+        });
+        edges.push({
+            from: genome.nodeCount,
+            to: edge.to,
+            weight: Math.random() * 2 - 1,
+            innovation: innovation + 1,
+            enabled: true,
+        });
+        return {
+            genome: {
+                domain: genome.domain,
+                edges: edges,
+                nodeCount: genome.nodeCount + 1,
+            },
+            innovationIndex: innovation + 2,
+        };
+    };
+    var connectMutation = function (genome, innovation, from, to) {
+        console.assert(to !== from);
+        console.assert(to < genome.nodeCount);
+        console.assert(from < genome.nodeCount);
+        var edgeCheck = genome.edges.find(function (edge) { return edge.from === from && edge.to === to; });
+        if (edgeCheck) {
+            return { genome: genome, innovationIndex: innovation };
+        }
+        var edges = genome.edges.map(function (edge) { return (__assign({}, edge)); });
+        edges.push({
+            from: from,
+            to: to,
+            weight: Math.random() * 2 - 1,
+            innovation: innovation,
+            enabled: true,
+        });
+        return {
+            genome: {
+                domain: genome.domain,
+                edges: edges,
+                nodeCount: genome.nodeCount,
+            },
+            innovationIndex: innovation + 1,
+        };
+    };
+    var printGenome = function (genome) {
+        var e_4, _a;
+        console.log("Genome: ".concat(genome.nodeCount, " nodes"));
+        try {
+            for (var _b = __values(genome.edges), _c = _b.next(); !_c.done; _c = _b.next()) {
+                var edge = _c.value;
+                console.log("Edge: ".concat(edge.from, " -> ").concat(edge.to, " (").concat(edge.weight, ") ").concat(edge.enabled ? "enabled" : "disabled", " Innovation: ").concat(edge.innovation));
+            }
+        }
+        catch (e_4_1) { e_4 = { error: e_4_1 }; }
+        finally {
+            try {
+                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+            }
+            finally { if (e_4) throw e_4.error; }
+        }
+    };
+    exports.printGenome = printGenome;
+    // This hangs if the dag is not a dag (it shouldn't)
+    var computePlan = function (genome) {
+        var e_5, _a;
+        var nodeDeps = new Array(genome.nodeCount);
+        try {
+            for (var _b = __values(genome.edges), _c = _b.next(); !_c.done; _c = _b.next()) {
+                var edge = _c.value;
+                if (!edge.enabled) {
+                    continue;
+                }
+                if (!nodeDeps[edge.to]) {
+                    nodeDeps[edge.to] = [];
+                }
+                nodeDeps[edge.to].push(edge);
+            }
+        }
+        catch (e_5_1) { e_5 = { error: e_5_1 }; }
+        finally {
+            try {
+                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+            }
+            finally { if (e_5) throw e_5.error; }
+        }
+        var nodeComputed = new Array(genome.nodeCount).fill(false);
+        for (var i = 0; i < genome.domain.inputs; i++) {
+            nodeComputed[i] = true;
+        }
+        var plan = [];
+        var computeNode = function (node) {
+            var e_6, _a;
+            if (nodeComputed[node]) {
+                return;
+            }
+            var deps = nodeDeps[node];
+            if (!deps) {
+                throw new Error("Invalid topology found while building compute plan (non-input node has no inputs)");
+            }
+            try {
+                for (var deps_1 = __values(deps), deps_1_1 = deps_1.next(); !deps_1_1.done; deps_1_1 = deps_1.next()) {
+                    var dep = deps_1_1.value;
+                    computeNode(dep.from);
+                    plan.push(dep);
+                }
+            }
+            catch (e_6_1) { e_6 = { error: e_6_1 }; }
+            finally {
+                try {
+                    if (deps_1_1 && !deps_1_1.done && (_a = deps_1.return)) _a.call(deps_1);
+                }
+                finally { if (e_6) throw e_6.error; }
+            }
+            nodeComputed[node] = true;
+            plan.push("activation");
+        };
+        for (var i = 0; i < genome.domain.outputs; i++) {
+            computeNode(genome.domain.inputs + i);
+        }
+        return { plan: plan, nodeCount: genome.nodeCount };
+    };
+    exports.computePlan = computePlan;
+    var printPlan = function (plan) {
+        var e_7, _a;
+        console.log("Plan: ".concat(plan.length, " steps"));
+        try {
+            for (var plan_1 = __values(plan), plan_1_1 = plan_1.next(); !plan_1_1.done; plan_1_1 = plan_1.next()) {
+                var step = plan_1_1.value;
+                if (typeof step === "string") {
+                    console.log("Step: ".concat(step));
+                    continue;
+                }
+                console.log("Step: ".concat(step.from, " -> ").concat(step.to, " (").concat(step.weight, ") ").concat(step.enabled ? "enabled" : "disabled", " Innovation: ").concat(step.innovation));
+            }
+        }
+        catch (e_7_1) { e_7 = { error: e_7_1 }; }
+        finally {
+            try {
+                if (plan_1_1 && !plan_1_1.done && (_a = plan_1.return)) _a.call(plan_1);
+            }
+            finally { if (e_7) throw e_7.error; }
+        }
+    };
+    exports.printPlan = printPlan;
+    // Sigmoid activation function from the NEAT paper
+    var activation = function (x) { return 1 / (1 + Math.exp(-x)); };
+    // This can be made more efficient by performing the plan in place on an existing array of the correct size
+    var compute = function (_a, inputs) {
+        var e_8, _b;
+        var plan = _a.plan, nodeCount = _a.nodeCount;
+        var nodes = new Array(nodeCount).fill(0);
+        for (var i = 0; i < inputs.length; i++) {
+            nodes[i] = inputs[i];
+        }
+        var lastNode = Number.NaN;
+        try {
+            for (var plan_2 = __values(plan), plan_2_1 = plan_2.next(); !plan_2_1.done; plan_2_1 = plan_2.next()) {
+                var step = plan_2_1.value;
+                if (typeof step === "string") {
+                    // console.assert(step === "activation");
+                    nodes[lastNode] = activation(nodes[lastNode]);
+                    continue;
+                }
+                nodes[step.to] += nodes[step.from] * step.weight;
+                lastNode = step.to;
+            }
+        }
+        catch (e_8_1) { e_8 = { error: e_8_1 }; }
+        finally {
+            try {
+                if (plan_2_1 && !plan_2_1.done && (_b = plan_2.return)) _b.call(plan_2);
+            }
+            finally { if (e_8) throw e_8.error; }
+        }
+        return nodes.slice(inputs.length);
+    };
+    exports.compute = compute;
+    var mutateWeights = function (genome) {
+        var e_9, _a;
+        var edges = genome.edges.map(function (edge) { return (__assign({}, edge)); });
+        try {
+            for (var edges_1 = __values(edges), edges_1_1 = edges_1.next(); !edges_1_1.done; edges_1_1 = edges_1.next()) {
+                var edge = edges_1_1.value;
+                if (Math.random() < 0.8) {
+                    edge.weight += Math.random() * 0.4 - 0.2;
+                }
+            }
+        }
+        catch (e_9_1) { e_9 = { error: e_9_1 }; }
+        finally {
+            try {
+                if (edges_1_1 && !edges_1_1.done && (_a = edges_1.return)) _a.call(edges_1);
+            }
+            finally { if (e_9) throw e_9.error; }
+        }
+        return {
+            domain: genome.domain,
+            edges: edges,
+            nodeCount: genome.nodeCount,
+        };
+    };
+    var progenerate = function (domain, size) {
+        var genomes = [];
+        var progenitor = {
+            domain: domain,
+            edges: [],
+            nodeCount: domain.inputs + domain.outputs,
+        };
+        var innovation = 0;
+        for (var i = 0; i < domain.outputs; i++) {
+            for (var j = 0; j < domain.inputs; j++) {
+                var _a = connectMutation(progenitor, innovation, j, domain.inputs + i), genome = _a.genome, innovationIndex = _a.innovationIndex;
+                progenitor = genome;
+                innovation = innovationIndex;
+            }
+        }
+        for (var i = 0; i < size; i++) {
+            genomes.push(mutateWeights(progenitor));
+        }
+        return { genomes: genomes, innovation: innovation };
+    };
+    exports.progenerate = progenerate;
+});
+define("game", ["require", "exports", "asteroids", "neat"], function (require, exports, asteroids_1, neat_1) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.tester2 = exports.tester = void 0;
     asteroids_1 = __importDefault(asteroids_1);
     var linePointDistance = function (line, point) {
         return line.norm.x * point.x + line.norm.y * point.y - line.dist;
@@ -274,6 +594,7 @@ define("game", ["require", "exports", "asteroids"], function (require, exports, 
     var positiveModulo = function (x, n) {
         return ((x % n) + n) % n;
     };
+    var bulletMaxLifetime = 60;
     var repositionedEntity = function (entity, position) {
         var copy = __assign({}, entity);
         copy.position = position;
@@ -396,7 +717,7 @@ define("game", ["require", "exports", "asteroids"], function (require, exports, 
                 gameState.alive = false;
             }
             bullets.forEach(function (bullet) {
-                if (asteroid.radius > 0 && bullet.lifetime < 100 && toroidalDistance(asteroid.position, bullet.position, { x: canvas.width, y: canvas.height }) < asteroid.radius) {
+                if (asteroid.radius > 0 && bullet.lifetime < bulletMaxLifetime && toroidalDistance(asteroid.position, bullet.position, { x: canvas.width, y: canvas.height }) < asteroid.radius) {
                     gameState.score++;
                     var radius = asteroid.radius - 5;
                     var heading = { x: asteroid.heading.x + (bullet.heading.x * 4) / radius, y: asteroid.heading.y + (bullet.heading.y * 4) / radius };
@@ -419,11 +740,11 @@ define("game", ["require", "exports", "asteroids"], function (require, exports, 
                         asteroids.push(b);
                     }
                     asteroid.radius = 0;
-                    bullet.lifetime = 100;
+                    bullet.lifetime = bulletMaxLifetime;
                 }
             });
         });
-        gameState.bullets = gameState.bullets.filter(function (bullet) { return bullet.lifetime < 100; });
+        gameState.bullets = gameState.bullets.filter(function (bullet) { return bullet.lifetime < bulletMaxLifetime; });
         // remove asteroids that have been destroyed
         gameState.asteroids = gameState.asteroids.filter(function (asteroid) { return asteroid.radius > 0; });
         // wrap everything
@@ -439,7 +760,7 @@ define("game", ["require", "exports", "asteroids"], function (require, exports, 
         });
     };
     var drawEverything = function (gameState) {
-        var e_1, _a;
+        var e_10, _a;
         clearCanvas();
         try {
             for (var _b = __values(allEquivalences(gameState.ship, { x: canvas.width, y: canvas.height })), _c = _b.next(); !_c.done; _c = _b.next()) {
@@ -447,47 +768,47 @@ define("game", ["require", "exports", "asteroids"], function (require, exports, 
                 drawTriangle(shipTriangle(shipInstance));
             }
         }
-        catch (e_1_1) { e_1 = { error: e_1_1 }; }
+        catch (e_10_1) { e_10 = { error: e_10_1 }; }
         finally {
             try {
                 if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
             }
-            finally { if (e_1) throw e_1.error; }
+            finally { if (e_10) throw e_10.error; }
         }
         gameState.asteroids.forEach(function (asteroid) {
-            var e_2, _a;
+            var e_11, _a;
             try {
                 for (var _b = __values(allEquivalences(asteroid, { x: canvas.width, y: canvas.height })), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var asteroidInstance = _c.value;
                     drawCircle({ center: asteroidInstance.position, radius: asteroid.radius }, asteroidInstance.highlighted ? "red" : "black");
                 }
             }
-            catch (e_2_1) { e_2 = { error: e_2_1 }; }
+            catch (e_11_1) { e_11 = { error: e_11_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_2) throw e_2.error; }
+                finally { if (e_11) throw e_11.error; }
             }
         });
         gameState.bullets.forEach(function (bullet) {
-            var e_3, _a;
+            var e_12, _a;
             try {
                 for (var _b = __values(allEquivalences(bullet, { x: canvas.width, y: canvas.height })), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var bulletInstance = _c.value;
                     drawPoint(bulletInstance.position);
                 }
             }
-            catch (e_3_1) { e_3 = { error: e_3_1 }; }
+            catch (e_12_1) { e_12 = { error: e_12_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_3) throw e_3.error; }
+                finally { if (e_12) throw e_12.error; }
             }
         });
     };
-    // NEAT stuff
+    // NEAT state space
     // There are so many arbitrary decisions in this section
     var positionDelta = function (a, b, canvasSize) {
         var minX = Math.min(a.x, b.x);
@@ -504,13 +825,14 @@ define("game", ["require", "exports", "asteroids"], function (require, exports, 
     };
     // model parameters
     var closestCount = 5;
-    var speedAdjustedCount = 5;
+    var dangerCount = 5;
+    // this does not modify the game state except for highlighting the asteroids that it is returning data for
     var stateSpace = function (gameState) {
         var ship = gameState.ship, asteroids = gameState.asteroids;
         var shipTheta = Math.atan2(ship.heading.y, ship.heading.x);
-        var closestAsteroids = new Array(5).fill({ distance: Infinity, data: { velocity: 0, theta: 0, distance: 0, phi: 0, asteroid: null } });
+        var closestAsteroids = new Array(closestCount).fill({ distance: Infinity, data: { velocity: 0, theta: 0, distance: 0, phi: 0, asteroid: null } });
         // I may want to have an additional field for the danger value
-        var dangerAsteroids = new Array(5).fill({ danger: 0, data: { velocity: 0, theta: 0, distance: 0, phi: 0, asteroid: null } });
+        var dangerAsteroids = new Array(dangerCount).fill({ danger: 0, data: { velocity: 0, theta: 0, distance: 0, phi: 0, asteroid: null } });
         var nextShipPosition = {
             x: positiveModulo(ship.position.x + ship.heading.x * ship.speed, canvas.width),
             y: positiveModulo(ship.position.y + ship.heading.y * ship.speed, canvas.height),
@@ -578,12 +900,127 @@ define("game", ["require", "exports", "asteroids"], function (require, exports, 
             return data;
         }));
     };
+    // hook up the nn to the game for
+    var domain = { inputs: (closestCount + dangerCount) * 4 + 1, outputs: 5 };
+    // This code is wrong but I am writing and testing stuff incrementally
+    var setupNetwork = function (count) {
+        var _a = (0, neat_1.progenerate)(domain, count), genomes = _a.genomes, innovation = _a.innovation;
+        return { plans: genomes.map(function (genome) { return (0, neat_1.computePlan)(genome); }), innovation: innovation };
+    };
+    var runStep = function (data, plan) {
+        var inputs = new Array(domain.inputs);
+        for (var i = 0; i < closestCount + dangerCount; i++) {
+            var _a = data[i], velocity = _a.velocity, theta = _a.theta, distance = _a.distance, phi = _a.phi;
+            inputs[i * 4] = velocity;
+            inputs[i * 4 + 1] = theta;
+            inputs[i * 4 + 2] = distance;
+            inputs[i * 4 + 3] = phi;
+        }
+        inputs[inputs.length - 1] = 1;
+        return (0, neat_1.compute)(plan, inputs);
+    };
+    var asteroidsCopy = function () {
+        return asteroids_1.default.map(function (asteroid) {
+            var position = __rest(asteroid.position, []), heading = __rest(asteroid.heading, []), speed = asteroid.speed, radius = asteroid.radius;
+            return { position: __assign({}, position), heading: __assign({}, heading), speed: speed, radius: radius };
+        });
+    };
+    // top level simulation functions
+    // headless simulation
+    var runSimulation = function (plan) {
+        if (!canvas) {
+            setupCanvas();
+        }
+        var state = initialState();
+        // We load the asteroids the same every time for now
+        state.asteroids = asteroidsCopy();
+        state.asteroids.forEach(function (asteroid) { return (asteroid.heading = normalize(asteroid.heading)); });
+        var inputs = {
+            left: false,
+            right: false,
+            up: false,
+            down: false,
+            space: false,
+        };
+        var frame = 0;
+        while (state.alive) {
+            updateGameState(state, inputs);
+            if (state.asteroids.length === 0) {
+                console.log("It won!");
+                throw new Error("It won!");
+            }
+            var space = stateSpace(state);
+            frame++;
+            // if (frame % 20 === 0) {
+            //   console.log(space);
+            // }
+            var outputs = runStep(space, plan);
+            var _a = __read(outputs, 5), left = _a[0], right = _a[1], up = _a[2], down = _a[3], spacebar = _a[4];
+            inputs.left = left > 0.5;
+            inputs.right = right > 0.5;
+            inputs.up = up > 0.5;
+            inputs.down = down > 0.5;
+            inputs.space = spacebar > 0.5;
+        }
+        console.log("Simulation over with score ".concat(state.score, " on frame ").concat(frame));
+        return frame / 50 + state.score * 100;
+    };
+    var showSimulation = function (plan) {
+        if (!canvas) {
+            setupCanvas();
+        }
+        var state = initialState();
+        state.asteroids = asteroidsCopy();
+        state.asteroids.forEach(function (asteroid) { return (asteroid.heading = normalize(asteroid.heading)); });
+        var inputs = {
+            left: false,
+            right: false,
+            up: false,
+            down: false,
+            space: false,
+        };
+        var frame = 0;
+        var loop = function () {
+            if (!state.alive) {
+                console.log("Simulation over with score ".concat(state.score, " on frame ").concat(frame));
+                return;
+            }
+            updateGameState(state, inputs);
+            if (state.asteroids.length === 0) {
+                console.log("It won!");
+                throw new Error("It won!");
+            }
+            var space = stateSpace(state);
+            frame++;
+            var outputs = runStep(space, plan);
+            var _a = __read(outputs, 5), left = _a[0], right = _a[1], up = _a[2], down = _a[3], spacebar = _a[4];
+            inputs.left = left > 0.5;
+            inputs.right = right > 0.5;
+            inputs.up = up > 0.5;
+            inputs.down = down > 0.5;
+            inputs.space = spacebar > 0.5;
+            drawEverything(state);
+            requestAnimationFrame(loop);
+        };
+        loop();
+    };
+    var tester2 = function () {
+        console.log("Running 15 simulations");
+        var _a = setupNetwork(15), plans = _a.plans, innovation = _a.innovation;
+        var fitnesses = plans.map(function (plan) { return ({ fitness: runSimulation(plan), plan: plan }); });
+        var sorted = fitnesses.sort(function (a, b) { return b.fitness - a.fitness; });
+        var best = sorted[0];
+        console.log("Best fitness", best.fitness);
+        console.log(best);
+        showSimulation(best.plan);
+    };
+    exports.tester2 = tester2;
     // temporary test code
     var tester = function () {
         setupCanvas();
         var state = initialState();
         // We load the asteroids the same every time for now
-        state.asteroids = asteroids_1.default;
+        state.asteroids = asteroidsCopy();
         state.asteroids.forEach(function (asteroid) { return (asteroid.heading = normalize(asteroid.heading)); });
         var inputs = {
             left: false,
@@ -627,6 +1064,7 @@ define("game", ["require", "exports", "asteroids"], function (require, exports, 
             }
         };
         var frame = 0;
+        // const { plan } = setupNetwork();
         var loop = function () {
             updateGameState(state, inputs);
             if (!state.alive) {
@@ -637,325 +1075,24 @@ define("game", ["require", "exports", "asteroids"], function (require, exports, 
                 console.log("You won!");
                 return;
             }
-            var space = stateSpace(state);
-            frame++;
-            if (frame % 20 === 0) {
-                console.log(space);
-            }
+            // const space = stateSpace(state);
+            // frame++;
+            // if (frame % 20 === 0) {
+            //   console.log(space);
+            // }
+            // const outputs = runStep(space, plan);
+            // const [left, right, up, down, spacebar] = outputs;
+            // inputs.left = left > 0.5;
+            // inputs.right = right > 0.5;
+            // inputs.up = up > 0.5;
+            // inputs.down = down > 0.5;
+            // inputs.space = spacebar > 0.5;
             drawEverything(state);
             requestAnimationFrame(loop);
         };
         loop();
     };
     exports.tester = tester;
-});
-// import assert from "assert";
-define("neat", ["require", "exports"], function (require, exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.computePlan = exports.printPlan = exports.printGenome = exports.compute = exports.progenerate = void 0;
-    var crossover = function (a, b) {
-        var e_4, _a, e_5, _b, e_6, _c;
-        console.assert(a.domain.inputs === b.domain.inputs);
-        console.assert(a.domain.outputs === b.domain.outputs);
-        var innovations = new Set();
-        try {
-            for (var _d = __values(a.edges), _e = _d.next(); !_e.done; _e = _d.next()) {
-                var edge = _e.value;
-                innovations.add(edge.innovation);
-            }
-        }
-        catch (e_4_1) { e_4 = { error: e_4_1 }; }
-        finally {
-            try {
-                if (_e && !_e.done && (_a = _d.return)) _a.call(_d);
-            }
-            finally { if (e_4) throw e_4.error; }
-        }
-        try {
-            for (var _f = __values(b.edges), _g = _f.next(); !_g.done; _g = _f.next()) {
-                var edge = _g.value;
-                innovations.add(edge.innovation);
-            }
-        }
-        catch (e_5_1) { e_5 = { error: e_5_1 }; }
-        finally {
-            try {
-                if (_g && !_g.done && (_b = _f.return)) _b.call(_f);
-            }
-            finally { if (e_5) throw e_5.error; }
-        }
-        var edges = [];
-        var _loop_1 = function (innovation) {
-            var edgeA = a.edges.find(function (edge) { return edge.innovation === innovation; });
-            var edgeB = b.edges.find(function (edge) { return edge.innovation === innovation; });
-            if (!edgeA) {
-                edges.push(edgeB);
-                return "continue";
-            }
-            else if (!edgeB) {
-                edges.push(edgeA);
-                return "continue";
-            }
-            console.assert(edgeA.from === edgeB.from);
-            console.assert(edgeA.to === edgeB.to);
-            edges.push({
-                from: edgeA.from,
-                to: edgeA.to,
-                weight: Math.random() < 0.5 ? edgeA.weight : edgeB.weight,
-                innovation: innovation,
-                enabled: edgeA.enabled && edgeB.enabled,
-            });
-        };
-        try {
-            for (var innovations_1 = __values(innovations), innovations_1_1 = innovations_1.next(); !innovations_1_1.done; innovations_1_1 = innovations_1.next()) {
-                var innovation = innovations_1_1.value;
-                _loop_1(innovation);
-            }
-        }
-        catch (e_6_1) { e_6 = { error: e_6_1 }; }
-        finally {
-            try {
-                if (innovations_1_1 && !innovations_1_1.done && (_c = innovations_1.return)) _c.call(innovations_1);
-            }
-            finally { if (e_6) throw e_6.error; }
-        }
-        return {
-            domain: a.domain,
-            edges: edges,
-            nodeCount: Math.max(a.nodeCount, b.nodeCount),
-        };
-    };
-    var insertEdgeMutation = function (genome, edgeIndex, innovation) {
-        var edges = genome.edges.map(function (edge) { return (__assign({}, edge)); });
-        var edge = edges[edgeIndex];
-        console.assert(edge.enabled);
-        edge.enabled = false;
-        edges.push({
-            from: edge.from,
-            to: genome.nodeCount,
-            weight: Math.random() * 2 - 1,
-            innovation: innovation,
-            enabled: true,
-        });
-        edges.push({
-            from: genome.nodeCount,
-            to: edge.to,
-            weight: Math.random() * 2 - 1,
-            innovation: innovation + 1,
-            enabled: true,
-        });
-        return {
-            genome: {
-                domain: genome.domain,
-                edges: edges,
-                nodeCount: genome.nodeCount + 1,
-            },
-            innovationIndex: innovation + 2,
-        };
-    };
-    var connectMutation = function (genome, innovation, from, to) {
-        console.assert(to !== from);
-        console.assert(to < genome.nodeCount);
-        console.assert(from < genome.nodeCount);
-        var edgeCheck = genome.edges.find(function (edge) { return edge.from === from && edge.to === to; });
-        if (edgeCheck) {
-            return { genome: genome, innovationIndex: innovation };
-        }
-        var edges = genome.edges.map(function (edge) { return (__assign({}, edge)); });
-        edges.push({
-            from: from,
-            to: to,
-            weight: Math.random() * 2 - 1,
-            innovation: innovation,
-            enabled: true,
-        });
-        return {
-            genome: {
-                domain: genome.domain,
-                edges: edges,
-                nodeCount: genome.nodeCount,
-            },
-            innovationIndex: innovation + 1,
-        };
-    };
-    var printGenome = function (genome) {
-        var e_7, _a;
-        console.log("Genome: ".concat(genome.nodeCount, " nodes"));
-        try {
-            for (var _b = __values(genome.edges), _c = _b.next(); !_c.done; _c = _b.next()) {
-                var edge = _c.value;
-                console.log("Edge: ".concat(edge.from, " -> ").concat(edge.to, " (").concat(edge.weight, ") ").concat(edge.enabled ? "enabled" : "disabled", " Innovation: ").concat(edge.innovation));
-            }
-        }
-        catch (e_7_1) { e_7 = { error: e_7_1 }; }
-        finally {
-            try {
-                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
-            }
-            finally { if (e_7) throw e_7.error; }
-        }
-    };
-    exports.printGenome = printGenome;
-    // This hangs if the dag is not a dag (it shouldn't)
-    var computePlan = function (genome) {
-        var e_8, _a;
-        var nodeDeps = new Array(genome.nodeCount);
-        try {
-            for (var _b = __values(genome.edges), _c = _b.next(); !_c.done; _c = _b.next()) {
-                var edge = _c.value;
-                if (!edge.enabled) {
-                    continue;
-                }
-                if (!nodeDeps[edge.to]) {
-                    nodeDeps[edge.to] = [];
-                }
-                nodeDeps[edge.to].push(edge);
-            }
-        }
-        catch (e_8_1) { e_8 = { error: e_8_1 }; }
-        finally {
-            try {
-                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
-            }
-            finally { if (e_8) throw e_8.error; }
-        }
-        var nodeComputed = new Array(genome.nodeCount).fill(false);
-        for (var i = 0; i < genome.domain.inputs; i++) {
-            nodeComputed[i] = true;
-        }
-        var plan = [];
-        var computeNode = function (node) {
-            var e_9, _a;
-            if (nodeComputed[node]) {
-                return;
-            }
-            var deps = nodeDeps[node];
-            if (!deps) {
-                throw new Error("Invalid topology found while building compute plan (non-input node has no inputs)");
-            }
-            try {
-                for (var deps_1 = __values(deps), deps_1_1 = deps_1.next(); !deps_1_1.done; deps_1_1 = deps_1.next()) {
-                    var dep = deps_1_1.value;
-                    computeNode(dep.from);
-                    plan.push(dep);
-                }
-            }
-            catch (e_9_1) { e_9 = { error: e_9_1 }; }
-            finally {
-                try {
-                    if (deps_1_1 && !deps_1_1.done && (_a = deps_1.return)) _a.call(deps_1);
-                }
-                finally { if (e_9) throw e_9.error; }
-            }
-            nodeComputed[node] = true;
-            plan.push("activation");
-        };
-        for (var i = 0; i < genome.domain.outputs; i++) {
-            computeNode(genome.domain.inputs + i);
-        }
-        return { plan: plan, nodeCount: genome.nodeCount };
-    };
-    exports.computePlan = computePlan;
-    var printPlan = function (plan) {
-        var e_10, _a;
-        console.log("Plan: ".concat(plan.length, " steps"));
-        try {
-            for (var plan_1 = __values(plan), plan_1_1 = plan_1.next(); !plan_1_1.done; plan_1_1 = plan_1.next()) {
-                var step = plan_1_1.value;
-                if (typeof step === "string") {
-                    console.log("Step: ".concat(step));
-                    continue;
-                }
-                console.log("Step: ".concat(step.from, " -> ").concat(step.to, " (").concat(step.weight, ") ").concat(step.enabled ? "enabled" : "disabled", " Innovation: ").concat(step.innovation));
-            }
-        }
-        catch (e_10_1) { e_10 = { error: e_10_1 }; }
-        finally {
-            try {
-                if (plan_1_1 && !plan_1_1.done && (_a = plan_1.return)) _a.call(plan_1);
-            }
-            finally { if (e_10) throw e_10.error; }
-        }
-    };
-    exports.printPlan = printPlan;
-    // Sigmoid activation function from the NEAT paper
-    var activation = function (x) { return 1 / (1 + Math.exp(-x)); };
-    var compute = function (_a, inputs) {
-        var e_11, _b;
-        var plan = _a.plan, nodeCount = _a.nodeCount;
-        var nodes = new Array(nodeCount).fill(0);
-        for (var i = 0; i < inputs.length; i++) {
-            nodes[i] = inputs[i];
-        }
-        var lastNode = Number.NaN;
-        try {
-            for (var plan_2 = __values(plan), plan_2_1 = plan_2.next(); !plan_2_1.done; plan_2_1 = plan_2.next()) {
-                var step = plan_2_1.value;
-                if (typeof step === "string") {
-                    // console.assert(step === "activation");
-                    nodes[lastNode] = activation(nodes[lastNode]);
-                    continue;
-                }
-                nodes[step.to] += nodes[step.from] * step.weight;
-                lastNode = step.to;
-            }
-        }
-        catch (e_11_1) { e_11 = { error: e_11_1 }; }
-        finally {
-            try {
-                if (plan_2_1 && !plan_2_1.done && (_b = plan_2.return)) _b.call(plan_2);
-            }
-            finally { if (e_11) throw e_11.error; }
-        }
-        return nodes.slice(inputs.length);
-    };
-    exports.compute = compute;
-    var mutateWeights = function (genome) {
-        var e_12, _a;
-        var edges = genome.edges.map(function (edge) { return (__assign({}, edge)); });
-        try {
-            for (var edges_1 = __values(edges), edges_1_1 = edges_1.next(); !edges_1_1.done; edges_1_1 = edges_1.next()) {
-                var edge = edges_1_1.value;
-                if (Math.random() < 0.8) {
-                    edge.weight += Math.random() * 0.4 - 0.2;
-                }
-            }
-        }
-        catch (e_12_1) { e_12 = { error: e_12_1 }; }
-        finally {
-            try {
-                if (edges_1_1 && !edges_1_1.done && (_a = edges_1.return)) _a.call(edges_1);
-            }
-            finally { if (e_12) throw e_12.error; }
-        }
-        return {
-            domain: genome.domain,
-            edges: edges,
-            nodeCount: genome.nodeCount,
-        };
-    };
-    var progenerate = function (domain, size) {
-        var genomes = [];
-        var progenitor = {
-            domain: domain,
-            edges: [],
-            nodeCount: domain.inputs + domain.outputs,
-        };
-        var innovation = 0;
-        for (var i = 0; i < domain.outputs; i++) {
-            for (var j = 0; j < domain.inputs; j++) {
-                var _a = connectMutation(progenitor, innovation, j, domain.inputs + i), genome = _a.genome, innovationIndex = _a.innovationIndex;
-                progenitor = genome;
-                innovation = innovationIndex;
-            }
-        }
-        for (var i = 0; i < size; i++) {
-            genomes.push(mutateWeights(progenitor));
-        }
-        return { genomes: genomes, innovation: innovation };
-    };
-    exports.progenerate = progenerate;
 });
 define("index", ["require", "exports", "game"], function (require, exports, game_1) {
     "use strict";
@@ -970,10 +1107,11 @@ define("index", ["require", "exports", "game"], function (require, exports, game
     //     console.log(compute(plan, [1, 2, 3]));
     //   }
     // };
+    var toRun = game_1.tester2;
     if (document.readyState === "complete") {
-        (0, game_1.tester)();
+        toRun();
     }
     else {
-        document.addEventListener("DOMContentLoaded", game_1.tester);
+        document.addEventListener("DOMContentLoaded", toRun);
     }
 });

@@ -1,4 +1,5 @@
 import asteroids from "./asteroids";
+import { Domain, progenerate, printGenome, ComputePlan, computePlan, printPlan, compute } from "./neat";
 
 // Basic geometry stuff
 
@@ -472,7 +473,7 @@ const drawEverything = (gameState: GameState) => {
   });
 };
 
-// NEAT stuff
+// NEAT state space
 
 // There are so many arbitrary decisions in this section
 
@@ -492,7 +493,7 @@ const positionDelta = (a: Point, b: Point, canvasSize: Point) => {
 
 // model parameters
 const closestCount = 5;
-const speedAdjustedCount = 5;
+const dangerCount = 5;
 
 // polar coordinates with the frame of reference of the ship
 type AsteroidData = { velocity: number; theta: number; distance: number; phi: number; asteroid: Asteroid };
@@ -502,9 +503,9 @@ const stateSpace = (gameState: GameState) => {
   const { ship, asteroids } = gameState;
   const shipTheta = Math.atan2(ship.heading.y, ship.heading.x);
 
-  const closestAsteroids: { distance: number; data: AsteroidData }[] = new Array(5).fill({ distance: Infinity, data: { velocity: 0, theta: 0, distance: 0, phi: 0, asteroid: null } });
+  const closestAsteroids: { distance: number; data: AsteroidData }[] = new Array(closestCount).fill({ distance: Infinity, data: { velocity: 0, theta: 0, distance: 0, phi: 0, asteroid: null } });
   // I may want to have an additional field for the danger value
-  const dangerAsteroids: { danger: number; data: AsteroidData }[] = new Array(5).fill({ danger: 0, data: { velocity: 0, theta: 0, distance: 0, phi: 0, asteroid: null } });
+  const dangerAsteroids: { danger: number; data: AsteroidData }[] = new Array(dangerCount).fill({ danger: 0, data: { velocity: 0, theta: 0, distance: 0, phi: 0, asteroid: null } });
 
   const nextShipPosition = {
     x: positiveModulo(ship.position.x + ship.heading.x * ship.speed, canvas.width),
@@ -583,7 +584,145 @@ const stateSpace = (gameState: GameState) => {
         }
         return data;
       })
-    );
+    ) as AsteroidData[];
+};
+
+// hook up the nn to the game for
+
+const domain = { inputs: (closestCount + dangerCount) * 4 + 1, outputs: 5 };
+
+// This code is wrong but I am writing and testing stuff incrementally
+const setupNetwork = (count: number) => {
+  const { genomes, innovation } = progenerate(domain, count);
+  return { plans: genomes.map((genome) => computePlan(genome)), innovation };
+};
+
+const runStep = (data: AsteroidData[], plan: ComputePlan) => {
+  const inputs: number[] = new Array(domain.inputs);
+  for (let i = 0; i < closestCount + dangerCount; i++) {
+    const { velocity, theta, distance, phi } = data[i];
+    inputs[i * 4] = velocity;
+    inputs[i * 4 + 1] = theta;
+    inputs[i * 4 + 2] = distance;
+    inputs[i * 4 + 3] = phi;
+  }
+  inputs[inputs.length - 1] = 1;
+  return compute(plan, inputs);
+};
+
+const asteroidsCopy = () => {
+  return asteroids.map((asteroid) => {
+    const { position: { ...position }, heading: { ...heading }, speed, radius } = asteroid;
+    return { position: { ...position }, heading: { ...heading }, speed, radius };
+  });
+};
+
+// top level simulation functions
+
+// headless simulation
+const runSimulation = (plan: ComputePlan) => {
+  if (!canvas) {
+    setupCanvas();
+  }
+
+  const state = initialState();
+
+  // We load the asteroids the same every time for now
+  state.asteroids = asteroidsCopy();
+  state.asteroids.forEach((asteroid) => (asteroid.heading = normalize(asteroid.heading)));
+
+  const inputs: InputState = {
+    left: false,
+    right: false,
+    up: false,
+    down: false,
+    space: false,
+  };
+
+  let frame = 0;
+  while (state.alive) {
+    updateGameState(state, inputs);
+    if (state.asteroids.length === 0) {
+      console.log("It won!");
+      throw new Error("It won!");
+    }
+
+    const space = stateSpace(state);
+    frame++;
+    // if (frame % 20 === 0) {
+    //   console.log(space);
+    // }
+
+    const outputs = runStep(space, plan);
+    const [left, right, up, down, spacebar] = outputs;
+    inputs.left = left > 0.5;
+    inputs.right = right > 0.5;
+    inputs.up = up > 0.5;
+    inputs.down = down > 0.5;
+    inputs.space = spacebar > 0.5;
+  }
+
+  console.log(`Simulation over with score ${state.score} on frame ${frame}`);
+  return frame / 50 + state.score * 100;
+};
+
+const showSimulation = (plan: ComputePlan) => {
+  if (!canvas) {
+    setupCanvas();
+  }
+
+  const state = initialState();
+
+  state.asteroids = asteroidsCopy();
+  state.asteroids.forEach((asteroid) => (asteroid.heading = normalize(asteroid.heading)));
+
+  const inputs: InputState = {
+    left: false,
+    right: false,
+    up: false,
+    down: false,
+    space: false,
+  };
+
+  let frame = 0;
+  const loop = () => {
+    if (!state.alive) {
+      console.log(`Simulation over with score ${state.score} on frame ${frame}`);
+      return;
+    }
+    updateGameState(state, inputs);
+    if (state.asteroids.length === 0) {
+      console.log("It won!");
+      throw new Error("It won!");
+    }
+
+    const space = stateSpace(state);
+    frame++;
+
+    const outputs = runStep(space, plan);
+    const [left, right, up, down, spacebar] = outputs;
+    inputs.left = left > 0.5;
+    inputs.right = right > 0.5;
+    inputs.up = up > 0.5;
+    inputs.down = down > 0.5;
+    inputs.space = spacebar > 0.5;
+
+    drawEverything(state);
+    requestAnimationFrame(loop);
+  };
+
+  loop();
+};
+
+const tester2 = () => {
+  console.log("Running 15 simulations");
+  const { plans, innovation } = setupNetwork(15);
+  const fitnesses = plans.map((plan) => ({ fitness: runSimulation(plan), plan }));
+  const sorted = fitnesses.sort((a, b) => b.fitness - a.fitness);
+  const best = sorted[0];
+  console.log("Best fitness", best.fitness);
+  console.log(best);
+  showSimulation(best.plan);
 };
 
 // temporary test code
@@ -594,7 +733,7 @@ const tester = () => {
   const state = initialState();
 
   // We load the asteroids the same every time for now
-  state.asteroids = asteroids;
+  state.asteroids = asteroidsCopy();
   state.asteroids.forEach((asteroid) => (asteroid.heading = normalize(asteroid.heading)));
 
   const inputs: InputState = {
@@ -643,6 +782,8 @@ const tester = () => {
 
   let frame = 0;
 
+  // const { plan } = setupNetwork();
+
   const loop = () => {
     updateGameState(state, inputs);
     if (!state.alive) {
@@ -654,11 +795,19 @@ const tester = () => {
       return;
     }
 
-    const space = stateSpace(state);
-    frame++;
-    if (frame % 20 === 0) {
-      console.log(space);
-    }
+    // const space = stateSpace(state);
+    // frame++;
+    // if (frame % 20 === 0) {
+    //   console.log(space);
+    // }
+
+    // const outputs = runStep(space, plan);
+    // const [left, right, up, down, spacebar] = outputs;
+    // inputs.left = left > 0.5;
+    // inputs.right = right > 0.5;
+    // inputs.up = up > 0.5;
+    // inputs.down = down > 0.5;
+    // inputs.space = spacebar > 0.5;
 
     drawEverything(state);
     requestAnimationFrame(loop);
@@ -667,4 +816,4 @@ const tester = () => {
   loop();
 };
 
-export { tester };
+export { tester, tester2 };
