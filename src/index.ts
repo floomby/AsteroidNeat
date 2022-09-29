@@ -1,6 +1,6 @@
 import { Domain, progenerate, printGenome, computePlan, printPlan, compute, topologicalInsertionMutation } from "./neat";
 
-import { tester, tester2 } from "./game";
+import { playGame, startSimulations, resumeFromCheckpoint, initDB } from "./game";
 
 // const test = () => {
 //   const domain = { inputs: 3, outputs: 2 };
@@ -13,7 +13,23 @@ import { tester, tester2 } from "./game";
 //   }
 // };
 
-const toRun = tester2;
+const toRun = () => {
+  const restart = document.getElementById("restart") as HTMLButtonElement;
+  const resume = document.getElementById("resume") as HTMLButtonElement;
+
+  restart.onclick = () => {
+    startSimulations();
+  }
+
+  resume.onclick = () => {
+    resumeFromCheckpoint();
+  }
+
+  initDB(() => {
+    restart.disabled = false;
+    resume.disabled = false;
+  });
+};
 
 if (document.readyState === "complete") {
   toRun();

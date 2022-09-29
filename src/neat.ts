@@ -22,99 +22,6 @@ const cloneGenome = (genome: Genome): Genome => {
   };
 };
 
-const crossover = (a: Genome, b: Genome): Genome => {
-  console.assert(a.domain.inputs === b.domain.inputs);
-  console.assert(a.domain.outputs === b.domain.outputs);
-  const innovations = new Set<number>();
-  for (const edge of a.edges) {
-    innovations.add(edge.innovation);
-  }
-  for (const edge of b.edges) {
-    innovations.add(edge.innovation);
-  }
-  const edges: Edge[] = [];
-  for (const innovation of innovations) {
-    const edgeA = a.edges.find((edge) => edge.innovation === innovation);
-    const edgeB = b.edges.find((edge) => edge.innovation === innovation);
-    if (!edgeA) {
-      edges.push(edgeB!);
-      continue;
-    } else if (!edgeB) {
-      edges.push(edgeA);
-      continue;
-    }
-    console.assert(edgeA.from === edgeB.from);
-    console.assert(edgeA.to === edgeB.to);
-    edges.push({
-      from: edgeA.from,
-      to: edgeA.to,
-      weight: Math.random() < 0.5 ? edgeA.weight : edgeB.weight,
-      innovation,
-      enabled: edgeA.enabled && edgeB.enabled,
-    });
-  }
-  return {
-    domain: a.domain,
-    edges,
-    nodeCount: Math.max(a.nodeCount, b.nodeCount),
-  };
-};
-
-const insertEdgeMutation = (genome: Genome, edgeIndex: number, innovation: number): { genome: Genome; innovationIndex: number } => {
-  const edges = genome.edges.map((edge) => ({ ...edge }));
-  const edge = edges[edgeIndex];
-  console.assert(edge.enabled);
-  edge.enabled = false;
-  edges.push({
-    from: edge.from,
-    to: genome.nodeCount,
-    weight: Math.random() * 2 - 1,
-    innovation,
-    enabled: true,
-  });
-  edges.push({
-    from: genome.nodeCount,
-    to: edge.to,
-    weight: Math.random() * 2 - 1,
-    innovation: innovation + 1,
-    enabled: true,
-  });
-  return {
-    genome: {
-      domain: genome.domain,
-      edges,
-      nodeCount: genome.nodeCount + 1,
-    },
-    innovationIndex: innovation + 2,
-  };
-};
-
-const connectMutation = (genome: Genome, innovation: number, from: number, to: number): { genome: Genome; innovationIndex: number } => {
-  console.assert(to !== from);
-  console.assert(to < genome.nodeCount);
-  console.assert(from < genome.nodeCount);
-  const edgeCheck = genome.edges.find((edge) => edge.from === from && edge.to === to);
-  if (edgeCheck) {
-    return { genome, innovationIndex: innovation };
-  }
-  const edges = genome.edges.map((edge) => ({ ...edge }));
-  edges.push({
-    from,
-    to,
-    weight: Math.random() * 2 - 1,
-    innovation,
-    enabled: true,
-  });
-  return {
-    genome: {
-      domain: genome.domain,
-      edges,
-      nodeCount: genome.nodeCount,
-    },
-    innovationIndex: innovation + 1,
-  };
-};
-
 const isInputNode = (genome: Genome, node: number): boolean => {
   return node < genome.domain.inputs;
 };
@@ -155,6 +62,127 @@ const canConnect = (genome: Genome, from: number, to: number): boolean => {
   return true;
 };
 
+const onlyNew = (genome: Genome): Genome => {
+  const innovationBound = genome.domain.inputs + genome.domain.outputs;
+  return {
+    domain: genome.domain,
+    edges: genome.edges.filter((edge) => edge.innovation >= innovationBound),
+    nodeCount: genome.nodeCount,
+  };
+};
+
+// I thought that cycles appearing was a bug, but it is not.
+// The appearance of cycles is consistent with what is outlined in the paper.
+// Nevertheless the crossover rejects cycles when creating a merged topology.
+const crossover = (a: Genome, b: Genome): Genome => {
+  console.assert(a.domain.inputs === b.domain.inputs);
+  console.assert(a.domain.outputs === b.domain.outputs);
+  const innovations = new Set<number>();
+  for (const edge of a.edges) {
+    innovations.add(edge.innovation);
+  }
+  for (const edge of b.edges) {
+    innovations.add(edge.innovation);
+  }
+  const edges: Edge[] = [];
+  for (const innovation of innovations) {
+    const edgeA = a.edges.find((edge) => edge.innovation === innovation);
+    const edgeB = b.edges.find((edge) => edge.innovation === innovation);
+    if (!edgeA) {
+      if (!canConnect({ domain: a.domain, edges, nodeCount: Math.max(a.nodeCount, b.nodeCount) }, edgeB.from, edgeB.to)) {
+        console.log("Cannot connect", edgeB.from, edgeB.to);
+        continue;
+      }
+      edges.push(edgeB!);
+      continue;
+    } else if (!edgeB) {
+      edges.push(edgeA);
+      if (!canConnect({ domain: a.domain, edges, nodeCount: Math.max(a.nodeCount, b.nodeCount) }, edgeA.from, edgeA.to)) {
+        console.log("Cannot connect", edgeA.from, edgeA.to);
+        continue;
+      }
+      continue;
+    }
+    console.assert(edgeA.from === edgeB.from);
+    console.assert(edgeA.to === edgeB.to);
+    if (!canConnect({ domain: a.domain, edges, nodeCount: Math.max(a.nodeCount, b.nodeCount) }, edgeA.from, edgeA.to)) {
+      console.log("Cannot connect", edgeA.from, edgeA.to);
+      continue;
+    }
+
+    edges.push({
+      from: edgeA.from,
+      to: edgeA.to,
+      weight: Math.random() < 0.5 ? edgeA.weight : edgeB.weight,
+      innovation,
+      enabled: edgeA.enabled && edgeB.enabled,
+    });
+  }
+  return {
+    domain: a.domain,
+    edges,
+    nodeCount: Math.max(a.nodeCount, b.nodeCount),
+  };
+};
+
+const insertEdgeMutation = (genome: Genome, edgeIndex: number, innovation: number): { genome: Genome; innovationIndex: number } => {
+  const edges = genome.edges.map((edge) => ({ ...edge }));
+  const edge = edges[edgeIndex];
+  console.assert(edge.enabled);
+  edge.enabled = false;
+  edges.push({
+    from: edge.from,
+    to: genome.nodeCount,
+    weight: edge.weight,
+    innovation,
+    enabled: true,
+  });
+  // console.log("innovation", innovation);
+  edges.push({
+    from: genome.nodeCount,
+    to: edge.to,
+    weight: 0.75 + Math.random() * 0.5,
+    innovation: innovation + 1,
+    enabled: true,
+  });
+  // console.log("innovation", innovation + 1);
+  return {
+    genome: {
+      domain: genome.domain,
+      edges,
+      nodeCount: genome.nodeCount + 1,
+    },
+    innovationIndex: innovation + 2,
+  };
+};
+
+const connectMutation = (genome: Genome, innovation: number, from: number, to: number): { genome: Genome; innovationIndex: number } => {
+  console.assert(to !== from);
+  console.assert(to < genome.nodeCount);
+  console.assert(from < genome.nodeCount);
+  const edgeCheck = genome.edges.find((edge) => edge.from === from && edge.to === to);
+  if (edgeCheck) {
+    return { genome, innovationIndex: innovation };
+  }
+  const edges = genome.edges.map((edge) => ({ ...edge }));
+  edges.push({
+    from,
+    to,
+    weight: Math.random() * 0.5 - 0.25,
+    innovation,
+    enabled: true,
+  });
+  // console.log("innovation", innovation);
+  return {
+    genome: {
+      domain: genome.domain,
+      edges,
+      nodeCount: genome.nodeCount,
+    },
+    innovationIndex: innovation + 1,
+  };
+};
+
 const connectableTo = (genome: Genome, from: number): number[] => {
   const nodes: number[] = [];
   for (let i = 0; i < genome.nodeCount; i++) {
@@ -186,7 +214,7 @@ const topologicalConnectionMutation = (genome: Genome, innovation: number): { ge
   throw new Error("not implemented");
 };
 
-const acceptConnectionRate = 0.1;
+const acceptConnectionRate = 0.02;
 
 const topologicalInsertionMutation = (genome: Genome, innovation: number): { genome: Genome; innovationIndex: number } => {
   let randomEdgeIndex = -1;
@@ -232,7 +260,7 @@ const printGenome = (genome: Genome): void => {
 // TODO support different activation functions
 type ComputeStep = Edge | "activation";
 
-type ComputePlan = { plan: ComputeStep[]; genome: Genome };
+type ComputePlan = { plan: ComputeStep[]; genome: Genome; protection: number };
 
 // This hangs if the dag is not a dag (it shouldn't)
 const computePlan = (genome: Genome): ComputePlan => {
@@ -257,11 +285,12 @@ const computePlan = (genome: Genome): ComputePlan => {
     }
     const deps = nodeDeps[node];
     if (!deps) {
-      throw new Error("Invalid topology found while building compute plan (non-input node has no inputs)");
-    }
-    for (const dep of deps) {
-      computeNode(dep.from);
-      plan.push(dep);
+      // throw new Error("Invalid topology found while building compute plan (non-input node has no inputs)");
+    } else {
+      for (const dep of deps) {
+        computeNode(dep.from);
+        plan.push(dep);
+      }
     }
     nodeComputed[node] = true;
     plan.push("activation");
@@ -269,7 +298,7 @@ const computePlan = (genome: Genome): ComputePlan => {
   for (let i = 0; i < genome.domain.outputs; i++) {
     computeNode(genome.domain.inputs + i);
   }
-  return { plan, genome };
+  return { plan, genome, protection: 0 };
 };
 
 const printPlan = (plan: ComputeStep[]): void => {
@@ -319,25 +348,51 @@ const mutateWeights = (genome: Genome): Genome => {
   };
 };
 
+const progenerationConnectionRate = 0.05;
+
 const progenerate = (domain: Domain, size: number): { genomes: Genome[]; innovation: number } => {
   const genomes: Genome[] = [];
-  let progenitor: Genome = {
-    domain,
-    edges: [],
-    nodeCount: domain.inputs + domain.outputs,
-  };
   let innovation = 0;
-  for (let i = 0; i < domain.outputs; i++) {
-    for (let j = 0; j < domain.inputs; j++) {
-      const { genome, innovationIndex } = connectMutation(progenitor, innovation, j, domain.inputs + i);
-      progenitor = genome;
-      innovation = innovationIndex;
-    }
-  }
   for (let i = 0; i < size; i++) {
+    let progenitor: Genome = {
+      domain,
+      edges: [],
+      nodeCount: domain.inputs + domain.outputs,
+    };
+    for (let i = 0; i < domain.outputs; i++) {
+      for (let j = 0; j < domain.inputs; j++) {
+        if (Math.random() < progenerationConnectionRate) {
+          const done = connectMutation(progenitor, innovation, j, domain.inputs + i);
+          progenitor = done.genome;
+          innovation = done.innovationIndex;
+        }
+      }
+    }
     genomes.push(mutateWeights(progenitor));
   }
   return { genomes, innovation };
+};
+
+const geneticDistance = (a: Genome, b: Genome): number => {
+  const aEdges = new Map<number, Edge>();
+  for (const edge of a.edges) {
+    aEdges.set(edge.innovation, edge);
+  }
+  const bEdges = new Map<number, Edge>();
+  for (const edge of b.edges) {
+    bEdges.set(edge.innovation, edge);
+  }
+  const aKeys = new Set(aEdges.keys());
+  const bKeys = new Set(bEdges.keys());
+  const disjoint = new Set([...aKeys].filter((x) => !bKeys.has(x)));
+  const excess = new Set([...bKeys].filter((x) => !aKeys.has(x)));
+  const matching = new Set([...aKeys].filter((x) => bKeys.has(x)));
+  let weightDiff = 0;
+  for (const key of matching) {
+    weightDiff += Math.abs(aEdges.get(key)!.weight - bEdges.get(key)!.weight);
+  }
+  const n = Math.max(a.nodeCount, b.nodeCount);
+  return (disjoint.size + excess.size) / n + weightDiff / matching.size;
 };
 
 export {
@@ -355,4 +410,9 @@ export {
   insertEdgeMutation,
   topologicalConnectionMutation,
   topologicalInsertionMutation,
+  geneticDistance,
+  crossover,
+  isHiddenNode,
+  isOutputNode,
+  isInputNode,
 };

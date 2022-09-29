@@ -1,5 +1,17 @@
 // import asteroids from "./asteroids";
-import { Domain, progenerate, printGenome, ComputePlan, computePlan, printPlan, compute, mutateWeights, insertEdgeMutation, topologicalInsertionMutation } from "./neat";
+import {
+  Domain,
+  progenerate,
+  printGenome,
+  ComputePlan,
+  computePlan,
+  printPlan,
+  compute,
+  mutateWeights,
+  insertEdgeMutation,
+  topologicalInsertionMutation,
+  crossover,
+} from "./neat";
 
 // Basic geometry stuff
 
@@ -106,7 +118,9 @@ const doesTriangleEdgeIntersectCircle = (triangle: Triangle, circle: Circle) => 
 
 // This is slow, I should probably optimize to remove recalculating the lines
 const isCircleIntersectingOrInsideTriangle = (triangle: Triangle, circle: Circle) => {
-  return isTriangleVertexInCircle(triangle, circle) || doesTriangleEdgeIntersectCircle(triangle, circle) || isPointInTriangle(triangle, circle.center);
+  return (
+    isTriangleVertexInCircle(triangle, circle) || doesTriangleEdgeIntersectCircle(triangle, circle) || isPointInTriangle(triangle, circle.center)
+  );
 };
 
 // drawing code for the basic geometry stuff
@@ -255,17 +269,22 @@ type AsteroidInit = { heading: Point; position: Point; speed: number; radius: nu
 const randomAsteroids = (count: number) => {
   console.assert(canvas !== undefined, "canvas not initialized");
   const asteroids: AsteroidInit[] = [];
+  const radius = 20;
   for (let i = 0; i < count; i++) {
     const heading = { x: Math.random() * 2 - 1, y: Math.random() * 2 - 1 };
     const position = { x: Math.random() * canvas.width, y: Math.random() * canvas.height };
     const speed = Math.random() * 2 + 1;
-    const radius = 20;
     if (toroidalDistance(position, { x: canvas.width / 2, y: canvas.height / 2 }, { x: canvas.width, y: canvas.height }) < 135) {
       i--;
       continue;
     }
     asteroids.push({ heading, position, speed, radius });
   }
+  // create an asteroid heading for the middle
+  const theta = Math.random() * 2 * Math.PI;
+  const heading = { x: Math.cos(theta), y: Math.sin(theta) };
+  const position = { x: canvas.width / 2 + 150 * -heading.x, y: canvas.height / 2 + 150 * -heading.y };
+  asteroids.push({ heading, position, speed: 1, radius });
   return asteroids;
 };
 
@@ -421,7 +440,10 @@ const updateGameState = (gameState: GameState, inputs: InputState) => {
   }
 
   asteroids.forEach((asteroid) => {
-    const tri = shipTriangle(ship).map(({ x, y }) => ({ x: positiveModulo(x + xOffset, canvas.width), y: positiveModulo(y + yOffset, canvas.height) })) as Triangle;
+    const tri = shipTriangle(ship).map(({ x, y }) => ({
+      x: positiveModulo(x + xOffset, canvas.width),
+      y: positiveModulo(y + yOffset, canvas.height),
+    })) as Triangle;
     if (
       toroidalDistance(asteroid.position, ship.position, { x: canvas.width, y: canvas.height }) < 100 &&
       isCircleIntersectingOrInsideTriangle(tri, {
@@ -433,7 +455,11 @@ const updateGameState = (gameState: GameState, inputs: InputState) => {
     }
 
     bullets.forEach((bullet) => {
-      if (asteroid.radius > 0 && bullet.lifetime < bulletMaxLifetime && toroidalDistance(asteroid.position, bullet.position, { x: canvas.width, y: canvas.height }) < asteroid.radius) {
+      if (
+        asteroid.radius > 0 &&
+        bullet.lifetime < bulletMaxLifetime &&
+        toroidalDistance(asteroid.position, bullet.position, { x: canvas.width, y: canvas.height }) < asteroid.radius
+      ) {
         gameState.score++;
         const radius = asteroid.radius - 5;
         const heading = { x: asteroid.heading.x + (bullet.heading.x * 4) / radius, y: asteroid.heading.y + (bullet.heading.y * 4) / radius };
@@ -513,8 +539,8 @@ const positionDelta = (a: Point, b: Point, canvasSize: Point) => {
 };
 
 // model parameters
-const closestCount = 7;
-const dangerCount = 7;
+const closestCount = 10;
+const dangerCount = 10;
 
 // polar coordinates with the frame of reference of the ship
 type AsteroidData = { velocity: number; theta: number; distance: number; phi: number; radius: number; asteroid: Asteroid };
@@ -529,7 +555,10 @@ const stateSpace = (gameState: GameState) => {
     data: { velocity: 0, theta: 0, distance: 0, phi: 0, radius: 0, asteroid: null },
   });
   // I may want to have an additional field for the danger value
-  const dangerAsteroids: { danger: number; data: AsteroidData }[] = new Array(dangerCount).fill({ danger: 0, data: { velocity: 0, theta: 0, distance: 0, phi: 0, radius: 0, asteroid: null } });
+  const dangerAsteroids: { danger: number; data: AsteroidData }[] = new Array(dangerCount).fill({
+    danger: 0,
+    data: { velocity: 0, theta: 0, distance: 0, phi: 0, radius: 0, asteroid: null },
+  });
 
   const nextShipPosition = {
     x: positiveModulo(ship.position.x + ship.heading.x * ship.speed, canvas.width),
@@ -695,8 +724,10 @@ const runSimulation = (plan: ComputePlan) => {
     inputs.space = spacebar > 0.5;
   }
 
+  const hiddenNodeCount = plan.genome.nodeCount - plan.genome.domain.inputs - plan.genome.domain.outputs;
+
   // console.log(`Simulation over with score ${state.score} on frame ${frame}`);
-  return frame / 40 + state.score * 60;
+  return frame / 10 + state.score * 5 - 2 * hiddenNodeCount + (plan.protection > 0 ? 5 : 0);
 };
 
 let displaying = false;
@@ -754,26 +785,118 @@ const showSimulation = (plan: ComputePlan) => {
   loop();
 };
 
+let db: IDBDatabase;
+
+const initDB = (callback: () => void) => {
+  if (db) {
+    return;
+  }
+  const request = window.indexedDB.open("Checkpoint", 3);
+  request.onerror = (event) => {
+    console.log("Error opening database", event);
+  };
+  request.onsuccess = (event) => {
+    db = request.result;
+    db.onerror = (event) => {
+      console.log("Database error", event);
+    };
+    // db.createObjectStore("Checkpoints", { keyPath: "id", autoIncrement: true });
+    callback();
+  };
+  request.onupgradeneeded = (event) => {
+    db = request.result;
+    db.createObjectStore("Checkpoints", { keyPath: "id", autoIncrement: true });
+    console.log("Yeah");
+  };
+  // request.onupgradeneeded = (event) => {
+  //   db = request.result;
+  //   if (event.oldVersion === 0) {
+  //     console.log("First time setup");
+  //     return;
+  //   }
+  //   console.log("Should never happen", event);
+  // };
+};
+
+const saveCheckpoint = (checkpoint: { data: { fitness: number; plan: ComputePlan }[]; innovation: number; iteration: number }) => {
+  if (!db) {
+    throw new Error("Database not initialized");
+  }
+  const transaction = db.transaction(["Checkpoints"], "readwrite");
+  const objectStore = transaction.objectStore("Checkpoints");
+  const request = objectStore.add(checkpoint);
+  request.onsuccess = (event) => {
+    console.log("Checkpoint saved");
+  };
+  request.onerror = (event) => {
+    console.log("Error saving checkpoint", event);
+  };
+};
+
+const loadCheckpoint = (callback: (checkpoint: { data: { fitness: number; plan: ComputePlan }[]; innovation: number; iteration: number }) => void) => {
+  if (!db) {
+    throw new Error("Database not initialized");
+  }
+  const transaction = db.transaction(["Checkpoints"], "readonly");
+  const objectStore = transaction.objectStore("Checkpoints");
+  const request = objectStore.getAll();
+  request.onsuccess = (event) => {
+    const checkpoints = request.result;
+    if (checkpoints.length === 0) {
+      console.log("No checkpoints found");
+      return;
+    }
+    const checkpoint = checkpoints[checkpoints.length - 1];
+    console.log("Loaded checkpoint", checkpoint);
+    callback(checkpoint);
+  };
+  request.onerror = (event) => {
+    console.log("Error loading checkpoint", event);
+  };
+};
+
 const averageOverRunsCount = 10;
 
-const bestPerRound = 10;
-const copiesPerRound = 5;
+const bestPerRound = 40;
+const copiesPerRound = 30;
 
-const tester2 = () => {
-  setupCanvas();
+const startSimulations = (checkpoint?: { data: { fitness: number; plan: ComputePlan }[]; innovation: number; iteration: number }) => {
+  if (!canvas) {
+    setupCanvas();
+  }
+
+  let plans: ComputePlan[] = [];
+  let innovation: number;
+  let sorted: { fitness: number; plan: ComputePlan }[] = [];
+  let best: { fitness: number; plan: ComputePlan } | undefined = undefined;
+  let iteration = 1;
+
   asteroids = randomAsteroids(15);
 
-  let { plans, innovation } = setupNetwork(bestPerRound * copiesPerRound);
-  let fitnesses = plans.map((plan) => ({ fitness: runSimulation(plan), plan }));
-  let sorted = fitnesses.sort((a, b) => b.fitness - a.fitness);
-  let best = sorted[0];
-  console.log("Best fitness", best.fitness);
-  console.log(best);
+  if (!checkpoint) {
+    console.log("Starting from scratch");
+    const setup = setupNetwork(bestPerRound * copiesPerRound);
+    plans = setup.plans;
+    innovation = setup.innovation;
 
-  let iteration = 1;
+    let fitnesses = plans.map((plan) => ({ fitness: runSimulation(plan), plan }));
+    sorted = fitnesses.sort((a, b) => b.fitness - a.fitness);
+    best = sorted[0];
+    console.log("Best fitness", best.fitness);
+    console.log(best);
+  } else {
+    sorted = checkpoint.data;
+    innovation = checkpoint.innovation;
+    iteration = checkpoint.iteration;
+    console.log(`Loading checkpoint from iteration ${iteration}`);
+  }
+
   const doIteration = () => {
     if (iteration % 15 === 0) {
       console.log(`Iteration ${iteration} - TOPOLOGICAL MUTATIONS`);
+      if (iteration % 2 === 0) {
+        console.log("DOING CROSSOVER");
+      }
 
       const bestResults = sorted.slice(0, bestPerRound);
       plans = [];
@@ -782,11 +905,23 @@ const tester2 = () => {
           if (i === 0) {
             plans.push(bestResults[j].plan);
           } else {
-            // console.log("Mutating");
-            const { genome, innovationIndex } = topologicalInsertionMutation(bestResults[j].plan.genome, innovation);
-            // printGenome(genome);
-            innovation = innovationIndex;
-            plans.push(computePlan(genome));
+            if (iteration % 2 === 0) {
+              // get a random best result different from the one we are copying and breed them
+              let otherIndex = j;
+              while (otherIndex === j) {
+                otherIndex = Math.floor(Math.random() * bestResults.length);
+              }
+              const other = bestResults[otherIndex].plan;
+              const genome = crossover(bestResults[j].plan.genome, other.genome);
+              plans.push(computePlan(genome));
+              plans[plans.length - 1].protection = 5 * averageOverRunsCount;
+            } else {
+              // Insertion mutation
+              const { genome, innovationIndex } = topologicalInsertionMutation(bestResults[j].plan.genome, innovation);
+              innovation = innovationIndex;
+              plans.push(computePlan(genome));
+              plans[plans.length - 1].protection = 5 * averageOverRunsCount;
+            }
           }
         }
       }
@@ -796,11 +931,15 @@ const tester2 = () => {
         asteroids = randomAsteroids(15);
         for (let j = 0; j < plans.length; j++) {
           averages[j] += runSimulation(plans[j]);
+          if (!plans[j].protection) {
+            plans[j].protection = 0;
+          }
+          plans[j].protection -= 1;
         }
       }
       averages = averages.map((fitness) => fitness / averageOverRunsCount);
       sorted = averages.map((fitness, i) => ({ fitness, plan: plans[i] })).sort((a, b) => b.fitness - a.fitness);
-      console.log(sorted);
+      // console.log(sorted);
     } else {
       const bestResults = sorted.slice(0, bestPerRound);
       plans = [];
@@ -811,6 +950,7 @@ const tester2 = () => {
           } else {
             plans.push(computePlan(mutateWeights(bestResults[j].plan.genome)));
           }
+          plans[plans.length - 1].protection = bestResults[j].plan.protection;
         }
       }
 
@@ -819,19 +959,34 @@ const tester2 = () => {
         asteroids = randomAsteroids(15);
         for (let j = 0; j < plans.length; j++) {
           averages[j] += runSimulation(plans[j]);
+          if (!plans[j].protection) {
+            plans[j].protection = 0;
+          }
+          plans[j].protection -= 1;
         }
       }
       averages = averages.map((fitness) => fitness / averageOverRunsCount);
       sorted = averages.map((fitness, i) => ({ fitness, plan: plans[i] })).sort((a, b) => b.fitness - a.fitness);
-      console.log(sorted);
+      // console.log(sorted);
     }
     iteration++;
 
     best = sorted[0];
-    console.log("Best fitness", best.fitness);
+    console.log("Best fitness", best.fitness, "on iteration", iteration);
     // console.log(best);
 
-    if (iteration % 21 === 0) {
+    if (iteration % 10 === 2) {
+      console.log(`Saving checkpoint - ${iteration}`);
+      const checkpoint = {
+        data: sorted.slice(0, bestPerRound),
+        innovation,
+        iteration,
+      };
+      // localStorage.setItem("checkpoint", JSON.stringify(checkpoint));
+      saveCheckpoint(checkpoint);
+    }
+
+    if (iteration % 23 === 0) {
       afterDisplaying = doIteration;
       showSimulation(best.plan);
     } else {
@@ -839,13 +994,30 @@ const tester2 = () => {
     }
   };
 
-  afterDisplaying = doIteration;
-  showSimulation(best.plan);
+  if (!checkpoint) {
+    afterDisplaying = doIteration;
+    showSimulation(best.plan);
+  } else {
+    doIteration();
+  }
+};
+
+const resumeFromCheckpoint = () => {
+  // const data = JSON.parse(localStorage.getItem("checkpoint") || "");
+  // if (data.hasOwnProperty("data")) {
+  //   while (data.data.length < bestPerRound) {
+  //     data.data = data.data.concat(data.data);
+  //   }
+  //   startSimulations(data);
+  // } else {
+  //   startSimulations();
+  // }
+  loadCheckpoint(startSimulations);
 };
 
 // temporary test code
 
-const tester = () => {
+const playGame = () => {
   setupCanvas();
 
   const state = initialState();
@@ -934,4 +1106,4 @@ const tester = () => {
   loop();
 };
 
-export { tester, tester2 };
+export { playGame, startSimulations, resumeFromCheckpoint, initDB, setupCanvas, drawPoint, drawCircle, drawLine, clearCanvas, Point };

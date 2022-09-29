@@ -20,17 +20,6 @@ var __values = (this && this.__values) || function(o) {
     };
     throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
-var __rest = (this && this.__rest) || function (s, e) {
-    var t = {};
-    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
-        t[p] = s[p];
-    if (s != null && typeof Object.getOwnPropertySymbols === "function")
-        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
-            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
-                t[p[i]] = s[p[i]];
-        }
-    return t;
-};
 var __read = (this && this.__read) || function (o, n) {
     var m = typeof Symbol === "function" && o[Symbol.iterator];
     if (!m) return o;
@@ -47,28 +36,98 @@ var __read = (this && this.__read) || function (o, n) {
     }
     return ar;
 };
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 require(['index']);
 define("asteroids", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.default = [
-        { heading: { x: 0.24659300101214976, y: -0.11066311653737948 }, position: { x: 639.5966589923804, y: 300.9383572452827 }, speed: 1.7741208522201983, radius: 20 },
-        { heading: { x: 0.425045855226285, y: 0.1585146371754138 }, position: { x: 175.93979689915304, y: 55.8658023526839 }, speed: 1.5987627238451405, radius: 20 },
-        { heading: { x: -0.2642206069173445, y: 0.05529981796292205 }, position: { x: 712.5153863645352, y: 231.36527779070124 }, speed: 1.8005509086003744, radius: 20 },
-        { heading: { x: 0.0721580491949716, y: 0.4953368952530812 }, position: { x: 46.33964388999399, y: 335.232460239502 }, speed: 1.860982760701861, radius: 20 },
-        { heading: { x: -0.21287487040214037, y: -0.27552644966104034 }, position: { x: 45.2990049624411, y: 252.44789330746315 }, speed: 1.5276663659690106, radius: 20 },
-        { heading: { x: -0.3794020158765181, y: 0.0019672949962568076 }, position: { x: 606.577621502165, y: 244.81867559220584 }, speed: 1.5069666901051884, radius: 20 },
-        { heading: { x: 0.3240204427341242, y: 0.27861700452229377 }, position: { x: 375.19134792941816, y: 470.6943845938987 }, speed: 1.694472290807933, radius: 20 },
-        { heading: { x: 0.06344771387787196, y: 0.17325274855879025 }, position: { x: 642.8979821015399, y: 384.63862705594795 }, speed: 1.9088297169156001, radius: 20 },
-        { heading: { x: 0.3171709782804266, y: -0.2010902269328383 }, position: { x: 642.4963296133099, y: 66.89841381950261 }, speed: 1.30632256544642145, radius: 20 },
-        { heading: { x: 0.24977928600685595, y: -0.48351304373469217 }, position: { x: 679.2011628182141, y: 597.2789625771209 }, speed: 1.9449852402166208, radius: 20 },
+        {
+            heading: { x: 0.24659300101214976, y: -0.11066311653737948 },
+            position: { x: 639.5966589923804, y: 300.9383572452827 },
+            speed: 1.7741208522201983,
+            radius: 20,
+        },
+        {
+            heading: { x: 0.425045855226285, y: 0.1585146371754138 },
+            position: { x: 175.93979689915304, y: 55.8658023526839 },
+            speed: 1.5987627238451405,
+            radius: 20,
+        },
+        {
+            heading: { x: -0.2642206069173445, y: 0.05529981796292205 },
+            position: { x: 712.5153863645352, y: 231.36527779070124 },
+            speed: 1.8005509086003744,
+            radius: 20,
+        },
+        {
+            heading: { x: 0.0721580491949716, y: 0.4953368952530812 },
+            position: { x: 46.33964388999399, y: 335.232460239502 },
+            speed: 1.860982760701861,
+            radius: 20,
+        },
+        {
+            heading: { x: -0.21287487040214037, y: -0.27552644966104034 },
+            position: { x: 45.2990049624411, y: 252.44789330746315 },
+            speed: 1.5276663659690106,
+            radius: 20,
+        },
+        {
+            heading: { x: -0.3794020158765181, y: 0.0019672949962568076 },
+            position: { x: 606.577621502165, y: 244.81867559220584 },
+            speed: 1.5069666901051884,
+            radius: 20,
+        },
+        {
+            heading: { x: 0.3240204427341242, y: 0.27861700452229377 },
+            position: { x: 375.19134792941816, y: 470.6943845938987 },
+            speed: 1.694472290807933,
+            radius: 20,
+        },
+        {
+            heading: { x: 0.06344771387787196, y: 0.17325274855879025 },
+            position: { x: 642.8979821015399, y: 384.63862705594795 },
+            speed: 1.9088297169156001,
+            radius: 20,
+        },
+        {
+            heading: { x: 0.3171709782804266, y: -0.2010902269328383 },
+            position: { x: 642.4963296133099, y: 66.89841381950261 },
+            speed: 1.30632256544642145,
+            radius: 20,
+        },
+        {
+            heading: { x: 0.24977928600685595, y: -0.48351304373469217 },
+            position: { x: 679.2011628182141, y: 597.2789625771209 },
+            speed: 1.9449852402166208,
+            radius: 20,
+        },
     ];
 });
 // import assert from "assert";
 define("neat", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.topologicalInsertionMutation = exports.topologicalConnectionMutation = exports.insertEdgeMutation = exports.connectMutation = exports.mutateWeights = exports.computePlan = exports.printPlan = exports.printGenome = exports.compute = exports.progenerate = void 0;
+    exports.crossover = exports.geneticDistance = exports.topologicalInsertionMutation = exports.topologicalConnectionMutation = exports.insertEdgeMutation = exports.connectMutation = exports.mutateWeights = exports.computePlan = exports.printPlan = exports.printGenome = exports.compute = exports.progenerate = void 0;
     var cloneGenome = function (genome) {
         return {
             domain: genome.domain,
@@ -76,8 +135,67 @@ define("neat", ["require", "exports"], function (require, exports) {
             nodeCount: genome.nodeCount,
         };
     };
+    var isInputNode = function (genome, node) {
+        return node < genome.domain.inputs;
+    };
+    var isOutputNode = function (genome, node) {
+        return node >= genome.domain.inputs && node < genome.domain.inputs + genome.domain.outputs;
+    };
+    var isHiddenNode = function (genome, node) {
+        return node >= genome.domain.inputs + genome.domain.outputs;
+    };
+    var canConnect = function (genome, from, to) {
+        var e_1, _a;
+        if (isInputNode(genome, to)) {
+            return false;
+        }
+        if (isOutputNode(genome, from)) {
+            return false;
+        }
+        // check if there is a cycle
+        var visited = new Set();
+        var queue = [to];
+        while (queue.length > 0) {
+            var node = queue.pop();
+            if (node === from) {
+                return false;
+            }
+            if (visited.has(node)) {
+                continue;
+            }
+            visited.add(node);
+            try {
+                for (var _b = (e_1 = void 0, __values(genome.edges)), _c = _b.next(); !_c.done; _c = _b.next()) {
+                    var edge = _c.value;
+                    if (edge.from === node && edge.enabled) {
+                        queue.push(edge.to);
+                    }
+                }
+            }
+            catch (e_1_1) { e_1 = { error: e_1_1 }; }
+            finally {
+                try {
+                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                }
+                finally { if (e_1) throw e_1.error; }
+            }
+        }
+        return true;
+    };
+    var onlyNew = function (genome) {
+        var innovationBound = genome.domain.inputs + genome.domain.outputs;
+        return {
+            domain: genome.domain,
+            edges: genome.edges.filter(function (edge) { return edge.innovation >= innovationBound; }),
+            nodeCount: genome.nodeCount,
+        };
+    };
+    // FIXME: There is a bug that I am ignoring (instead I just cycle detect and reject)
+    // I think it is an implementation error in the historical marking (This function does do the correct thing topologically)
+    // Fixing the error would dramatically improve the performance of this function
+    // And no, the error is not repeated innovation markings, I already checked that
     var crossover = function (a, b) {
-        var e_1, _a, e_2, _b, e_3, _c;
+        var e_2, _a, e_3, _b, e_4, _c;
         console.assert(a.domain.inputs === b.domain.inputs);
         console.assert(a.domain.outputs === b.domain.outputs);
         var innovations = new Set();
@@ -87,12 +205,12 @@ define("neat", ["require", "exports"], function (require, exports) {
                 innovations.add(edge.innovation);
             }
         }
-        catch (e_1_1) { e_1 = { error: e_1_1 }; }
+        catch (e_2_1) { e_2 = { error: e_2_1 }; }
         finally {
             try {
                 if (_e && !_e.done && (_a = _d.return)) _a.call(_d);
             }
-            finally { if (e_1) throw e_1.error; }
+            finally { if (e_2) throw e_2.error; }
         }
         try {
             for (var _f = __values(b.edges), _g = _f.next(); !_g.done; _g = _f.next()) {
@@ -100,27 +218,39 @@ define("neat", ["require", "exports"], function (require, exports) {
                 innovations.add(edge.innovation);
             }
         }
-        catch (e_2_1) { e_2 = { error: e_2_1 }; }
+        catch (e_3_1) { e_3 = { error: e_3_1 }; }
         finally {
             try {
                 if (_g && !_g.done && (_b = _f.return)) _b.call(_f);
             }
-            finally { if (e_2) throw e_2.error; }
+            finally { if (e_3) throw e_3.error; }
         }
         var edges = [];
         var _loop_1 = function (innovation) {
             var edgeA = a.edges.find(function (edge) { return edge.innovation === innovation; });
             var edgeB = b.edges.find(function (edge) { return edge.innovation === innovation; });
             if (!edgeA) {
+                if (!canConnect({ domain: a.domain, edges: edges, nodeCount: Math.max(a.nodeCount, b.nodeCount) }, edgeB.from, edgeB.to)) {
+                    console.log("Cannot connect", edgeB.from, edgeB.to);
+                    return "continue";
+                }
                 edges.push(edgeB);
                 return "continue";
             }
             else if (!edgeB) {
                 edges.push(edgeA);
+                if (!canConnect({ domain: a.domain, edges: edges, nodeCount: Math.max(a.nodeCount, b.nodeCount) }, edgeA.from, edgeA.to)) {
+                    console.log("Cannot connect", edgeA.from, edgeA.to);
+                    return "continue";
+                }
                 return "continue";
             }
             console.assert(edgeA.from === edgeB.from);
             console.assert(edgeA.to === edgeB.to);
+            if (!canConnect({ domain: a.domain, edges: edges, nodeCount: Math.max(a.nodeCount, b.nodeCount) }, edgeA.from, edgeA.to)) {
+                console.log("Cannot connect", edgeA.from, edgeA.to);
+                return "continue";
+            }
             edges.push({
                 from: edgeA.from,
                 to: edgeA.to,
@@ -135,12 +265,12 @@ define("neat", ["require", "exports"], function (require, exports) {
                 _loop_1(innovation);
             }
         }
-        catch (e_3_1) { e_3 = { error: e_3_1 }; }
+        catch (e_4_1) { e_4 = { error: e_4_1 }; }
         finally {
             try {
                 if (innovations_1_1 && !innovations_1_1.done && (_c = innovations_1.return)) _c.call(innovations_1);
             }
-            finally { if (e_3) throw e_3.error; }
+            finally { if (e_4) throw e_4.error; }
         }
         return {
             domain: a.domain,
@@ -148,6 +278,7 @@ define("neat", ["require", "exports"], function (require, exports) {
             nodeCount: Math.max(a.nodeCount, b.nodeCount),
         };
     };
+    exports.crossover = crossover;
     var insertEdgeMutation = function (genome, edgeIndex, innovation) {
         var edges = genome.edges.map(function (edge) { return (__assign({}, edge)); });
         var edge = edges[edgeIndex];
@@ -156,17 +287,19 @@ define("neat", ["require", "exports"], function (require, exports) {
         edges.push({
             from: edge.from,
             to: genome.nodeCount,
-            weight: Math.random() * 2 - 1,
+            weight: edge.weight,
             innovation: innovation,
             enabled: true,
         });
+        // console.log("innovation", innovation);
         edges.push({
             from: genome.nodeCount,
             to: edge.to,
-            weight: Math.random() * 2 - 1,
+            weight: 0.75 + Math.random() * 0.5,
             innovation: innovation + 1,
             enabled: true,
         });
+        // console.log("innovation", innovation + 1);
         return {
             genome: {
                 domain: genome.domain,
@@ -189,10 +322,11 @@ define("neat", ["require", "exports"], function (require, exports) {
         edges.push({
             from: from,
             to: to,
-            weight: Math.random() * 2 - 1,
+            weight: Math.random() * 0.5 - 0.25,
             innovation: innovation,
             enabled: true,
         });
+        // console.log("innovation", innovation);
         return {
             genome: {
                 domain: genome.domain,
@@ -203,53 +337,6 @@ define("neat", ["require", "exports"], function (require, exports) {
         };
     };
     exports.connectMutation = connectMutation;
-    var isInputNode = function (genome, node) {
-        return node < genome.domain.inputs;
-    };
-    var isOutputNode = function (genome, node) {
-        return node >= genome.domain.inputs && node < genome.domain.inputs + genome.domain.outputs;
-    };
-    var isHiddenNode = function (genome, node) {
-        return node >= genome.domain.inputs + genome.domain.outputs;
-    };
-    var canConnect = function (genome, from, to) {
-        var e_4, _a;
-        if (isInputNode(genome, to)) {
-            return false;
-        }
-        if (isOutputNode(genome, from)) {
-            return false;
-        }
-        // check if there is a cycle
-        var visited = new Set();
-        var queue = [to];
-        while (queue.length > 0) {
-            var node = queue.pop();
-            if (node === from) {
-                return false;
-            }
-            if (visited.has(node)) {
-                continue;
-            }
-            visited.add(node);
-            try {
-                for (var _b = (e_4 = void 0, __values(genome.edges)), _c = _b.next(); !_c.done; _c = _b.next()) {
-                    var edge = _c.value;
-                    if (edge.from === node && edge.enabled) {
-                        queue.push(edge.to);
-                    }
-                }
-            }
-            catch (e_4_1) { e_4 = { error: e_4_1 }; }
-            finally {
-                try {
-                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
-                }
-                finally { if (e_4) throw e_4.error; }
-            }
-        }
-        return true;
-    };
     var connectableTo = function (genome, from) {
         var nodes = [];
         for (var i = 0; i < genome.nodeCount; i++) {
@@ -279,7 +366,7 @@ define("neat", ["require", "exports"], function (require, exports) {
         throw new Error("not implemented");
     };
     exports.topologicalConnectionMutation = topologicalConnectionMutation;
-    var acceptConnectionRate = 0.1;
+    var acceptConnectionRate = 0.02;
     var topologicalInsertionMutation = function (genome, innovation) {
         var e_5, _a, e_6, _b;
         var randomEdgeIndex = -1;
@@ -385,21 +472,23 @@ define("neat", ["require", "exports"], function (require, exports) {
             }
             var deps = nodeDeps[node];
             if (!deps) {
-                throw new Error("Invalid topology found while building compute plan (non-input node has no inputs)");
+                // throw new Error("Invalid topology found while building compute plan (non-input node has no inputs)");
             }
-            try {
-                for (var deps_1 = __values(deps), deps_1_1 = deps_1.next(); !deps_1_1.done; deps_1_1 = deps_1.next()) {
-                    var dep = deps_1_1.value;
-                    computeNode(dep.from);
-                    plan.push(dep);
-                }
-            }
-            catch (e_9_1) { e_9 = { error: e_9_1 }; }
-            finally {
+            else {
                 try {
-                    if (deps_1_1 && !deps_1_1.done && (_a = deps_1.return)) _a.call(deps_1);
+                    for (var deps_1 = __values(deps), deps_1_1 = deps_1.next(); !deps_1_1.done; deps_1_1 = deps_1.next()) {
+                        var dep = deps_1_1.value;
+                        computeNode(dep.from);
+                        plan.push(dep);
+                    }
                 }
-                finally { if (e_9) throw e_9.error; }
+                catch (e_9_1) { e_9 = { error: e_9_1 }; }
+                finally {
+                    try {
+                        if (deps_1_1 && !deps_1_1.done && (_a = deps_1.return)) _a.call(deps_1);
+                    }
+                    finally { if (e_9) throw e_9.error; }
+                }
             }
             nodeComputed[node] = true;
             plan.push("activation");
@@ -407,7 +496,7 @@ define("neat", ["require", "exports"], function (require, exports) {
         for (var i = 0; i < genome.domain.outputs; i++) {
             computeNode(genome.domain.inputs + i);
         }
-        return { plan: plan, genome: genome };
+        return { plan: plan, genome: genome, protection: 0 };
     };
     exports.computePlan = computePlan;
     var printPlan = function (plan) {
@@ -490,32 +579,88 @@ define("neat", ["require", "exports"], function (require, exports) {
         };
     };
     exports.mutateWeights = mutateWeights;
+    var progenerationConnectionRate = 0.05;
     var progenerate = function (domain, size) {
         var genomes = [];
-        var progenitor = {
-            domain: domain,
-            edges: [],
-            nodeCount: domain.inputs + domain.outputs,
-        };
         var innovation = 0;
-        for (var i = 0; i < domain.outputs; i++) {
-            for (var j = 0; j < domain.inputs; j++) {
-                var _a = connectMutation(progenitor, innovation, j, domain.inputs + i), genome = _a.genome, innovationIndex = _a.innovationIndex;
-                progenitor = genome;
-                innovation = innovationIndex;
-            }
-        }
         for (var i = 0; i < size; i++) {
+            var progenitor = {
+                domain: domain,
+                edges: [],
+                nodeCount: domain.inputs + domain.outputs,
+            };
+            for (var i_1 = 0; i_1 < domain.outputs; i_1++) {
+                for (var j = 0; j < domain.inputs; j++) {
+                    if (Math.random() < progenerationConnectionRate) {
+                        var done = connectMutation(progenitor, innovation, j, domain.inputs + i_1);
+                        progenitor = done.genome;
+                        innovation = done.innovationIndex;
+                    }
+                }
+            }
             genomes.push(mutateWeights(progenitor));
         }
         return { genomes: genomes, innovation: innovation };
     };
     exports.progenerate = progenerate;
+    var geneticDistance = function (a, b) {
+        var e_13, _a, e_14, _b, e_15, _c;
+        var aEdges = new Map();
+        try {
+            for (var _d = __values(a.edges), _e = _d.next(); !_e.done; _e = _d.next()) {
+                var edge = _e.value;
+                aEdges.set(edge.innovation, edge);
+            }
+        }
+        catch (e_13_1) { e_13 = { error: e_13_1 }; }
+        finally {
+            try {
+                if (_e && !_e.done && (_a = _d.return)) _a.call(_d);
+            }
+            finally { if (e_13) throw e_13.error; }
+        }
+        var bEdges = new Map();
+        try {
+            for (var _f = __values(b.edges), _g = _f.next(); !_g.done; _g = _f.next()) {
+                var edge = _g.value;
+                bEdges.set(edge.innovation, edge);
+            }
+        }
+        catch (e_14_1) { e_14 = { error: e_14_1 }; }
+        finally {
+            try {
+                if (_g && !_g.done && (_b = _f.return)) _b.call(_f);
+            }
+            finally { if (e_14) throw e_14.error; }
+        }
+        var aKeys = new Set(aEdges.keys());
+        var bKeys = new Set(bEdges.keys());
+        var disjoint = new Set(__spreadArray([], __read(aKeys), false).filter(function (x) { return !bKeys.has(x); }));
+        var excess = new Set(__spreadArray([], __read(bKeys), false).filter(function (x) { return !aKeys.has(x); }));
+        var matching = new Set(__spreadArray([], __read(aKeys), false).filter(function (x) { return bKeys.has(x); }));
+        var weightDiff = 0;
+        try {
+            for (var matching_1 = __values(matching), matching_1_1 = matching_1.next(); !matching_1_1.done; matching_1_1 = matching_1.next()) {
+                var key = matching_1_1.value;
+                weightDiff += Math.abs(aEdges.get(key).weight - bEdges.get(key).weight);
+            }
+        }
+        catch (e_15_1) { e_15 = { error: e_15_1 }; }
+        finally {
+            try {
+                if (matching_1_1 && !matching_1_1.done && (_c = matching_1.return)) _c.call(matching_1);
+            }
+            finally { if (e_15) throw e_15.error; }
+        }
+        var n = Math.max(a.nodeCount, b.nodeCount);
+        return (disjoint.size + excess.size) / n + weightDiff / matching.size;
+    };
+    exports.geneticDistance = geneticDistance;
 });
 define("game", ["require", "exports", "neat"], function (require, exports, neat_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.tester2 = exports.tester = void 0;
+    exports.initDB = exports.resumeFromCheckpoint = exports.startSimulations = exports.playGame = void 0;
     var linePointDistance = function (line, point) {
         return line.norm.x * point.x + line.norm.y * point.y - line.dist;
     };
@@ -596,7 +741,7 @@ define("game", ["require", "exports", "neat"], function (require, exports, neat_
     };
     // This is slow, I should probably optimize to remove recalculating the lines
     var isCircleIntersectingOrInsideTriangle = function (triangle, circle) {
-        return isTriangleVertexInCircle(triangle, circle) || doesTriangleEdgeIntersectCircle(triangle, circle) || isPointInTriangle(triangle, circle.center);
+        return (isTriangleVertexInCircle(triangle, circle) || doesTriangleEdgeIntersectCircle(triangle, circle) || isPointInTriangle(triangle, circle.center));
     };
     // drawing code for the basic geometry stuff
     var canvas;
@@ -732,17 +877,22 @@ define("game", ["require", "exports", "neat"], function (require, exports, neat_
     var randomAsteroids = function (count) {
         console.assert(canvas !== undefined, "canvas not initialized");
         var asteroids = [];
+        var radius = 20;
         for (var i = 0; i < count; i++) {
-            var heading = { x: Math.random() * 2 - 1, y: Math.random() * 2 - 1 };
-            var position = { x: Math.random() * canvas.width, y: Math.random() * canvas.height };
+            var heading_1 = { x: Math.random() * 2 - 1, y: Math.random() * 2 - 1 };
+            var position_1 = { x: Math.random() * canvas.width, y: Math.random() * canvas.height };
             var speed = Math.random() * 2 + 1;
-            var radius = 20;
-            if (toroidalDistance(position, { x: canvas.width / 2, y: canvas.height / 2 }, { x: canvas.width, y: canvas.height }) < 135) {
+            if (toroidalDistance(position_1, { x: canvas.width / 2, y: canvas.height / 2 }, { x: canvas.width, y: canvas.height }) < 135) {
                 i--;
                 continue;
             }
-            asteroids.push({ heading: heading, position: position, speed: speed, radius: radius });
+            asteroids.push({ heading: heading_1, position: position_1, speed: speed, radius: radius });
         }
+        // create an asteroid heading for the middle
+        var theta = Math.random() * 2 * Math.PI;
+        var heading = { x: Math.cos(theta), y: Math.sin(theta) };
+        var position = { x: canvas.width / 2 + 150 * -heading.x, y: canvas.height / 2 + 150 * -heading.y };
+        asteroids.push({ heading: heading, position: position, speed: 1, radius: radius });
         return asteroids;
     };
     var bulletMaxLifetime = 40;
@@ -858,7 +1008,10 @@ define("game", ["require", "exports", "neat"], function (require, exports, neat_
         asteroids.forEach(function (asteroid) {
             var tri = shipTriangle(ship).map(function (_a) {
                 var x = _a.x, y = _a.y;
-                return ({ x: positiveModulo(x + xOffset, canvas.width), y: positiveModulo(y + yOffset, canvas.height) });
+                return ({
+                    x: positiveModulo(x + xOffset, canvas.width),
+                    y: positiveModulo(y + yOffset, canvas.height),
+                });
             });
             if (toroidalDistance(asteroid.position, ship.position, { x: canvas.width, y: canvas.height }) < 100 &&
                 isCircleIntersectingOrInsideTriangle(tri, {
@@ -868,7 +1021,9 @@ define("game", ["require", "exports", "neat"], function (require, exports, neat_
                 gameState.alive = false;
             }
             bullets.forEach(function (bullet) {
-                if (asteroid.radius > 0 && bullet.lifetime < bulletMaxLifetime && toroidalDistance(asteroid.position, bullet.position, { x: canvas.width, y: canvas.height }) < asteroid.radius) {
+                if (asteroid.radius > 0 &&
+                    bullet.lifetime < bulletMaxLifetime &&
+                    toroidalDistance(asteroid.position, bullet.position, { x: canvas.width, y: canvas.height }) < asteroid.radius) {
                     gameState.score++;
                     var radius = asteroid.radius - 5;
                     var heading = { x: asteroid.heading.x + (bullet.heading.x * 4) / radius, y: asteroid.heading.y + (bullet.heading.y * 4) / radius };
@@ -911,7 +1066,7 @@ define("game", ["require", "exports", "neat"], function (require, exports, neat_
         });
     };
     var drawEverything = function (gameState) {
-        var e_13, _a;
+        var e_16, _a;
         clearCanvas();
         try {
             for (var _b = __values(allEquivalences(gameState.ship, { x: canvas.width, y: canvas.height })), _c = _b.next(); !_c.done; _c = _b.next()) {
@@ -919,43 +1074,43 @@ define("game", ["require", "exports", "neat"], function (require, exports, neat_
                 drawTriangle(shipTriangle(shipInstance));
             }
         }
-        catch (e_13_1) { e_13 = { error: e_13_1 }; }
+        catch (e_16_1) { e_16 = { error: e_16_1 }; }
         finally {
             try {
                 if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
             }
-            finally { if (e_13) throw e_13.error; }
+            finally { if (e_16) throw e_16.error; }
         }
         gameState.asteroids.forEach(function (asteroid) {
-            var e_14, _a;
+            var e_17, _a;
             try {
                 for (var _b = __values(allEquivalences(asteroid, { x: canvas.width, y: canvas.height })), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var asteroidInstance = _c.value;
                     drawCircle({ center: asteroidInstance.position, radius: asteroid.radius }, asteroidInstance.highlighted ? "red" : "black");
                 }
             }
-            catch (e_14_1) { e_14 = { error: e_14_1 }; }
+            catch (e_17_1) { e_17 = { error: e_17_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_14) throw e_14.error; }
+                finally { if (e_17) throw e_17.error; }
             }
         });
         gameState.bullets.forEach(function (bullet) {
-            var e_15, _a;
+            var e_18, _a;
             try {
                 for (var _b = __values(allEquivalences(bullet, { x: canvas.width, y: canvas.height })), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var bulletInstance = _c.value;
                     drawPoint(bulletInstance.position);
                 }
             }
-            catch (e_15_1) { e_15 = { error: e_15_1 }; }
+            catch (e_18_1) { e_18 = { error: e_18_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_15) throw e_15.error; }
+                finally { if (e_18) throw e_18.error; }
             }
         });
     };
@@ -975,8 +1130,8 @@ define("game", ["require", "exports", "neat"], function (require, exports, neat_
         return { x: x, y: y };
     };
     // model parameters
-    var closestCount = 7;
-    var dangerCount = 7;
+    var closestCount = 10;
+    var dangerCount = 10;
     // this does not modify the game state except for highlighting the asteroids that it is returning data for
     var stateSpace = function (gameState) {
         var ship = gameState.ship, asteroids = gameState.asteroids;
@@ -986,7 +1141,10 @@ define("game", ["require", "exports", "neat"], function (require, exports, neat_
             data: { velocity: 0, theta: 0, distance: 0, phi: 0, radius: 0, asteroid: null },
         });
         // I may want to have an additional field for the danger value
-        var dangerAsteroids = new Array(dangerCount).fill({ danger: 0, data: { velocity: 0, theta: 0, distance: 0, phi: 0, radius: 0, asteroid: null } });
+        var dangerAsteroids = new Array(dangerCount).fill({
+            danger: 0,
+            data: { velocity: 0, theta: 0, distance: 0, phi: 0, radius: 0, asteroid: null },
+        });
         var nextShipPosition = {
             x: positiveModulo(ship.position.x + ship.heading.x * ship.speed, canvas.width),
             y: positiveModulo(ship.position.y + ship.heading.y * ship.speed, canvas.height),
@@ -1054,7 +1212,7 @@ define("game", ["require", "exports", "neat"], function (require, exports, neat_
             return data;
         }));
     };
-    // hook up the nn to the game for
+    // hook up the nn to the game
     var domain = { inputs: (closestCount + dangerCount) * 5 + 2, outputs: 5 };
     // This code is wrong but I am writing and testing stuff incrementally
     var setupNetwork = function (count) {
@@ -1119,8 +1277,9 @@ define("game", ["require", "exports", "neat"], function (require, exports, neat_
             inputs.down = down > 0.5;
             inputs.space = spacebar > 0.5;
         }
+        var hiddenNodeCount = plan.genome.nodeCount - plan.genome.domain.inputs - plan.genome.domain.outputs;
         // console.log(`Simulation over with score ${state.score} on frame ${frame}`);
-        return frame / 40 + state.score * 60;
+        return frame / 10 + state.score * 5 - 2 * hiddenNodeCount + (plan.protection > 0 ? 5 : 0);
     };
     var displaying = false;
     var afterDisplaying = function () { };
@@ -1167,22 +1326,109 @@ define("game", ["require", "exports", "neat"], function (require, exports, neat_
         displaying = true;
         loop();
     };
+    var db;
+    var initDB = function (callback) {
+        if (db) {
+            return;
+        }
+        var request = window.indexedDB.open("Checkpoint", 3);
+        request.onerror = function (event) {
+            console.log("Error opening database", event);
+        };
+        request.onsuccess = function (event) {
+            db = request.result;
+            db.onerror = function (event) {
+                console.log("Database error", event);
+            };
+            // db.createObjectStore("Checkpoints", { keyPath: "id", autoIncrement: true });
+            callback();
+        };
+        request.onupgradeneeded = function (event) {
+            db = request.result;
+            db.createObjectStore("Checkpoints", { keyPath: "id", autoIncrement: true });
+            console.log("Yeah");
+        };
+        // request.onupgradeneeded = (event) => {
+        //   db = request.result;
+        //   if (event.oldVersion === 0) {
+        //     console.log("First time setup");
+        //     return;
+        //   }
+        //   console.log("Should never happen", event);
+        // };
+    };
+    exports.initDB = initDB;
+    var saveCheckpoint = function (checkpoint) {
+        if (!db) {
+            throw new Error("Database not initialized");
+        }
+        var transaction = db.transaction(["Checkpoints"], "readwrite");
+        var objectStore = transaction.objectStore("Checkpoints");
+        var request = objectStore.add(checkpoint);
+        request.onsuccess = function (event) {
+            console.log("Checkpoint saved");
+        };
+        request.onerror = function (event) {
+            console.log("Error saving checkpoint", event);
+        };
+    };
+    var loadCheckpoint = function (callback) {
+        if (!db) {
+            throw new Error("Database not initialized");
+        }
+        var transaction = db.transaction(["Checkpoints"], "readonly");
+        var objectStore = transaction.objectStore("Checkpoints");
+        var request = objectStore.getAll();
+        request.onsuccess = function (event) {
+            var checkpoints = request.result;
+            if (checkpoints.length === 0) {
+                console.log("No checkpoints found");
+                return;
+            }
+            var checkpoint = checkpoints[checkpoints.length - 1];
+            console.log("Loaded checkpoint", checkpoint);
+            callback(checkpoint);
+        };
+        request.onerror = function (event) {
+            console.log("Error loading checkpoint", event);
+        };
+    };
     var averageOverRunsCount = 10;
-    var bestPerRound = 10;
-    var copiesPerRound = 5;
-    var tester2 = function () {
-        setupCanvas();
-        asteroids = randomAsteroids(15);
-        var _a = setupNetwork(bestPerRound * copiesPerRound), plans = _a.plans, innovation = _a.innovation;
-        var fitnesses = plans.map(function (plan) { return ({ fitness: runSimulation(plan), plan: plan }); });
-        var sorted = fitnesses.sort(function (a, b) { return b.fitness - a.fitness; });
-        var best = sorted[0];
-        console.log("Best fitness", best.fitness);
-        console.log(best);
+    var bestPerRound = 40;
+    var copiesPerRound = 30;
+    var startSimulations = function (checkpoint) {
+        if (!canvas) {
+            setupCanvas();
+        }
+        var plans = [];
+        var innovation;
+        var sorted = [];
+        var best = undefined;
         var iteration = 1;
+        asteroids = randomAsteroids(15);
+        if (!checkpoint) {
+            console.log("Starting from scratch");
+            var setup = setupNetwork(bestPerRound * copiesPerRound);
+            plans = setup.plans;
+            innovation = setup.innovation;
+            var fitnesses = plans.map(function (plan) { return ({ fitness: runSimulation(plan), plan: plan }); });
+            sorted = fitnesses.sort(function (a, b) { return b.fitness - a.fitness; });
+            best = sorted[0];
+            console.log("Best fitness", best.fitness);
+            console.log(best);
+        }
+        else {
+            sorted = checkpoint.data;
+            innovation = checkpoint.innovation;
+            iteration = checkpoint.iteration;
+            console.log("Loading checkpoint from iteration ".concat(iteration));
+        }
         var doIteration = function () {
             if (iteration % 15 === 0) {
                 console.log("Iteration ".concat(iteration, " - TOPOLOGICAL MUTATIONS"));
+                if (iteration % 2 === 0) {
+                    console.log("DOING CROSSOVER");
+                }
                 var bestResults = sorted.slice(0, bestPerRound);
                 plans = [];
                 for (var j = 0; j < bestResults.length; j++) {
@@ -1191,11 +1437,24 @@ define("game", ["require", "exports", "neat"], function (require, exports, neat_
                             plans.push(bestResults[j].plan);
                         }
                         else {
-                            // console.log("Mutating");
-                            var _a = (0, neat_1.topologicalInsertionMutation)(bestResults[j].plan.genome, innovation), genome = _a.genome, innovationIndex = _a.innovationIndex;
-                            // printGenome(genome);
-                            innovation = innovationIndex;
-                            plans.push((0, neat_1.computePlan)(genome));
+                            if (iteration % 2 === 0) {
+                                // get a random best result different from the one we are copying and breed them
+                                var otherIndex = j;
+                                while (otherIndex === j) {
+                                    otherIndex = Math.floor(Math.random() * bestResults.length);
+                                }
+                                var other = bestResults[otherIndex].plan;
+                                var genome = (0, neat_1.crossover)(bestResults[j].plan.genome, other.genome);
+                                plans.push((0, neat_1.computePlan)(genome));
+                                plans[plans.length - 1].protection = 5 * averageOverRunsCount;
+                            }
+                            else {
+                                // Insertion mutation
+                                var _a = (0, neat_1.topologicalInsertionMutation)(bestResults[j].plan.genome, innovation), genome = _a.genome, innovationIndex = _a.innovationIndex;
+                                innovation = innovationIndex;
+                                plans.push((0, neat_1.computePlan)(genome));
+                                plans[plans.length - 1].protection = 5 * averageOverRunsCount;
+                            }
                         }
                     }
                 }
@@ -1204,11 +1463,15 @@ define("game", ["require", "exports", "neat"], function (require, exports, neat_
                     asteroids = randomAsteroids(15);
                     for (var j = 0; j < plans.length; j++) {
                         averages[j] += runSimulation(plans[j]);
+                        if (!plans[j].protection) {
+                            plans[j].protection = 0;
+                        }
+                        plans[j].protection -= 1;
                     }
                 }
                 averages = averages.map(function (fitness) { return fitness / averageOverRunsCount; });
                 sorted = averages.map(function (fitness, i) { return ({ fitness: fitness, plan: plans[i] }); }).sort(function (a, b) { return b.fitness - a.fitness; });
-                console.log(sorted);
+                // console.log(sorted);
             }
             else {
                 var bestResults = sorted.slice(0, bestPerRound);
@@ -1221,6 +1484,7 @@ define("game", ["require", "exports", "neat"], function (require, exports, neat_
                         else {
                             plans.push((0, neat_1.computePlan)((0, neat_1.mutateWeights)(bestResults[j].plan.genome)));
                         }
+                        plans[plans.length - 1].protection = bestResults[j].plan.protection;
                     }
                 }
                 var averages = new Array(plans.length).fill(0);
@@ -1228,17 +1492,31 @@ define("game", ["require", "exports", "neat"], function (require, exports, neat_
                     asteroids = randomAsteroids(15);
                     for (var j = 0; j < plans.length; j++) {
                         averages[j] += runSimulation(plans[j]);
+                        if (!plans[j].protection) {
+                            plans[j].protection = 0;
+                        }
+                        plans[j].protection -= 1;
                     }
                 }
                 averages = averages.map(function (fitness) { return fitness / averageOverRunsCount; });
                 sorted = averages.map(function (fitness, i) { return ({ fitness: fitness, plan: plans[i] }); }).sort(function (a, b) { return b.fitness - a.fitness; });
-                console.log(sorted);
+                // console.log(sorted);
             }
             iteration++;
             best = sorted[0];
-            console.log("Best fitness", best.fitness);
+            console.log("Best fitness", best.fitness, "on iteration", iteration);
             // console.log(best);
-            if (iteration % 21 === 0) {
+            if (iteration % 10 === 2) {
+                console.log("Saving checkpoint - ".concat(iteration));
+                var checkpoint_1 = {
+                    data: sorted.slice(0, bestPerRound),
+                    innovation: innovation,
+                    iteration: iteration,
+                };
+                // localStorage.setItem("checkpoint", JSON.stringify(checkpoint));
+                saveCheckpoint(checkpoint_1);
+            }
+            if (iteration % 23 === 0) {
                 afterDisplaying = doIteration;
                 showSimulation(best.plan);
             }
@@ -1246,12 +1524,30 @@ define("game", ["require", "exports", "neat"], function (require, exports, neat_
                 doIteration();
             }
         };
-        afterDisplaying = doIteration;
-        showSimulation(best.plan);
+        if (!checkpoint) {
+            afterDisplaying = doIteration;
+            showSimulation(best.plan);
+        }
+        else {
+            doIteration();
+        }
     };
-    exports.tester2 = tester2;
+    exports.startSimulations = startSimulations;
+    var resumeFromCheckpoint = function () {
+        // const data = JSON.parse(localStorage.getItem("checkpoint") || "");
+        // if (data.hasOwnProperty("data")) {
+        //   while (data.data.length < bestPerRound) {
+        //     data.data = data.data.concat(data.data);
+        //   }
+        //   startSimulations(data);
+        // } else {
+        //   startSimulations();
+        // }
+        loadCheckpoint(startSimulations);
+    };
+    exports.resumeFromCheckpoint = resumeFromCheckpoint;
     // temporary test code
-    var tester = function () {
+    var playGame = function () {
         setupCanvas();
         var state = initialState();
         // We load the asteroids the same every time for now
@@ -1327,7 +1623,7 @@ define("game", ["require", "exports", "neat"], function (require, exports, neat_
         };
         loop();
     };
-    exports.tester = tester;
+    exports.playGame = playGame;
 });
 define("index", ["require", "exports", "game"], function (require, exports, game_1) {
     "use strict";
@@ -1342,7 +1638,20 @@ define("index", ["require", "exports", "game"], function (require, exports, game
     //     console.log(compute(plan, [1, 2, 3]));
     //   }
     // };
-    var toRun = game_1.tester2;
+    var toRun = function () {
+        var restart = document.getElementById("restart");
+        var resume = document.getElementById("resume");
+        restart.onclick = function () {
+            (0, game_1.startSimulations)();
+        };
+        resume.onclick = function () {
+            (0, game_1.resumeFromCheckpoint)();
+        };
+        (0, game_1.initDB)(function () {
+            restart.disabled = false;
+            resume.disabled = false;
+        });
+    };
     if (document.readyState === "complete") {
         toRun();
     }
