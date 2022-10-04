@@ -502,7 +502,7 @@ const updateGameState = (gameState: GameState, inputs: InputState) => {
   });
 };
 
-const drawEverything = (gameState: GameState) => {
+const drawEverything = (gameState: GameState, onlyHighlighted = false) => {
   clearCanvas();
   for (const shipInstance of allEquivalences(gameState.ship, { x: canvas.width, y: canvas.height })) {
     drawTriangle(shipTriangle(shipInstance));
@@ -510,7 +510,9 @@ const drawEverything = (gameState: GameState) => {
 
   gameState.asteroids.forEach((asteroid) => {
     for (const asteroidInstance of allEquivalences(asteroid, { x: canvas.width, y: canvas.height })) {
-      drawCircle({ center: asteroidInstance.position, radius: asteroid.radius }, (asteroidInstance as Asteroid).highlighted ? "red" : "black");
+      if (!onlyHighlighted || (asteroidInstance as Asteroid).highlighted) {
+        drawCircle({ center: asteroidInstance.position, radius: asteroid.radius }, (asteroidInstance as Asteroid).highlighted ? "red" : "black");
+      }
     }
   });
   gameState.bullets.forEach((bullet) => {
@@ -833,7 +835,9 @@ const saveCheckpoint = (checkpoint: { data: { fitness: number; plan: ComputePlan
   };
 };
 
-const loadCheckpoint = (callback: (checkpoint: { data: { fitness: number; plan: ComputePlan }[]; innovation: number; iteration: number }) => void) => {
+const loadCheckpoint = (
+  callback: (checkpoint: { data: { fitness: number; plan: ComputePlan }[]; innovation: number; iteration: number }) => void
+) => {
   if (!db) {
     throw new Error("Database not initialized");
   }
@@ -986,7 +990,7 @@ const startSimulations = (checkpoint?: { data: { fitness: number; plan: ComputeP
       saveCheckpoint(checkpoint);
     }
 
-    if (iteration % 23 === 0) {
+    if (iteration % 1 === 0) {
       afterDisplaying = doIteration;
       showSimulation(best.plan);
     } else {
@@ -1017,12 +1021,15 @@ const resumeFromCheckpoint = () => {
 
 // temporary test code
 
-const playGame = () => {
-  setupCanvas();
+const playGame = (onlyHighlighted: boolean) => {
+  if (!canvas) {
+    setupCanvas();
+  }
 
   const state = initialState();
 
   // We load the asteroids the same every time for now
+  asteroids = randomAsteroids(15);
   state.asteroids = asteroidsCopy();
   state.asteroids.forEach((asteroid) => (asteroid.heading = normalize(asteroid.heading)));
 
@@ -1072,10 +1079,9 @@ const playGame = () => {
 
   let frame = 0;
 
-  // const { plan } = setupNetwork();
-
   const loop = () => {
     updateGameState(state, inputs);
+    stateSpace(state);
     if (!state.alive) {
       console.log("You died!");
       return;
@@ -1085,21 +1091,7 @@ const playGame = () => {
       return;
     }
 
-    // const space = stateSpace(state);
-    // frame++;
-    // if (frame % 20 === 0) {
-    //   console.log(space);
-    // }
-
-    // const outputs = runStep(space, plan);
-    // const [left, right, up, down, spacebar] = outputs;
-    // inputs.left = left > 0.5;
-    // inputs.right = right > 0.5;
-    // inputs.up = up > 0.5;
-    // inputs.down = down > 0.5;
-    // inputs.space = spacebar > 0.5;
-
-    drawEverything(state);
+    drawEverything(state, onlyHighlighted);
     requestAnimationFrame(loop);
   };
 

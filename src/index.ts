@@ -16,6 +16,8 @@ import { playGame, startSimulations, resumeFromCheckpoint, initDB } from "./game
 const toRun = () => {
   const restart = document.getElementById("restart") as HTMLButtonElement;
   const resume = document.getElementById("resume") as HTMLButtonElement;
+  const play = document.getElementById("play") as HTMLButtonElement;
+  const onlyHighlighted = document.getElementById("onlyHighlighted") as HTMLInputElement;
 
   restart.onclick = () => {
     startSimulations();
@@ -25,9 +27,16 @@ const toRun = () => {
     resumeFromCheckpoint();
   }
 
+  play.onclick = () => {
+    play.blur();
+    playGame(onlyHighlighted.checked);
+  }
+
   initDB(() => {
     restart.disabled = false;
     resume.disabled = false;
+    play.disabled = false;
+    onlyHighlighted.disabled = false;
   });
 };
 

@@ -127,7 +127,7 @@ define("asteroids", ["require", "exports"], function (require, exports) {
 define("neat", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.crossover = exports.geneticDistance = exports.topologicalInsertionMutation = exports.topologicalConnectionMutation = exports.insertEdgeMutation = exports.connectMutation = exports.mutateWeights = exports.computePlan = exports.printPlan = exports.printGenome = exports.compute = exports.progenerate = void 0;
+    exports.isInputNode = exports.isOutputNode = exports.isHiddenNode = exports.crossover = exports.geneticDistance = exports.topologicalInsertionMutation = exports.topologicalConnectionMutation = exports.insertEdgeMutation = exports.connectMutation = exports.mutateWeights = exports.computePlan = exports.printPlan = exports.printGenome = exports.compute = exports.progenerate = void 0;
     var cloneGenome = function (genome) {
         return {
             domain: genome.domain,
@@ -138,12 +138,15 @@ define("neat", ["require", "exports"], function (require, exports) {
     var isInputNode = function (genome, node) {
         return node < genome.domain.inputs;
     };
+    exports.isInputNode = isInputNode;
     var isOutputNode = function (genome, node) {
         return node >= genome.domain.inputs && node < genome.domain.inputs + genome.domain.outputs;
     };
+    exports.isOutputNode = isOutputNode;
     var isHiddenNode = function (genome, node) {
         return node >= genome.domain.inputs + genome.domain.outputs;
     };
+    exports.isHiddenNode = isHiddenNode;
     var canConnect = function (genome, from, to) {
         var e_1, _a;
         if (isInputNode(genome, to)) {
@@ -190,10 +193,9 @@ define("neat", ["require", "exports"], function (require, exports) {
             nodeCount: genome.nodeCount,
         };
     };
-    // FIXME: There is a bug that I am ignoring (instead I just cycle detect and reject)
-    // I think it is an implementation error in the historical marking (This function does do the correct thing topologically)
-    // Fixing the error would dramatically improve the performance of this function
-    // And no, the error is not repeated innovation markings, I already checked that
+    // I thought that cycles appearing was a bug, but it is not.
+    // The appearance of cycles is consistent with what is outlined in the paper.
+    // Nevertheless the crossover rejects cycles when creating a merged topology.
     var crossover = function (a, b) {
         var e_2, _a, e_3, _b, e_4, _c;
         console.assert(a.domain.inputs === b.domain.inputs);
@@ -660,7 +662,7 @@ define("neat", ["require", "exports"], function (require, exports) {
 define("game", ["require", "exports", "neat"], function (require, exports, neat_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.initDB = exports.resumeFromCheckpoint = exports.startSimulations = exports.playGame = void 0;
+    exports.clearCanvas = exports.drawLine = exports.drawCircle = exports.drawPoint = exports.setupCanvas = exports.initDB = exports.resumeFromCheckpoint = exports.startSimulations = exports.playGame = void 0;
     var linePointDistance = function (line, point) {
         return line.norm.x * point.x + line.norm.y * point.y - line.dist;
     };
@@ -752,6 +754,7 @@ define("game", ["require", "exports", "neat"], function (require, exports, neat_
         ctx.fillStyle = "white";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
     };
+    exports.setupCanvas = setupCanvas;
     var drawTriangle = function (triangle) {
         ctx.strokeStyle = "black";
         ctx.beginPath();
@@ -767,6 +770,7 @@ define("game", ["require", "exports", "neat"], function (require, exports, neat_
         ctx.arc(point.x, point.y, 2, 0, 2 * Math.PI);
         ctx.fill();
     };
+    exports.drawPoint = drawPoint;
     var drawCircle = function (circle, color) {
         if (color === void 0) { color = "black"; }
         ctx.strokeStyle = color;
@@ -774,6 +778,7 @@ define("game", ["require", "exports", "neat"], function (require, exports, neat_
         ctx.arc(circle.center.x, circle.center.y, circle.radius, 0, 2 * Math.PI);
         ctx.stroke();
     };
+    exports.drawCircle = drawCircle;
     var drawLine = function (line) {
         ctx.strokeStyle = "black";
         ctx.beginPath();
@@ -781,10 +786,12 @@ define("game", ["require", "exports", "neat"], function (require, exports, neat_
         ctx.lineTo(canvas.width, (line.dist - canvas.width * line.norm.x) / line.norm.y);
         ctx.stroke();
     };
+    exports.drawLine = drawLine;
     var clearCanvas = function () {
         ctx.fillStyle = "white";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
     };
+    exports.clearCanvas = clearCanvas;
     // I forgot that asteroids is on a torus and I made the above math for affine space
     var Boundaries;
     (function (Boundaries) {
@@ -1065,8 +1072,9 @@ define("game", ["require", "exports", "neat"], function (require, exports, neat_
             bullet.position.y = positiveModulo(bullet.position.y, canvas.height);
         });
     };
-    var drawEverything = function (gameState) {
+    var drawEverything = function (gameState, onlyHighlighted) {
         var e_16, _a;
+        if (onlyHighlighted === void 0) { onlyHighlighted = false; }
         clearCanvas();
         try {
             for (var _b = __values(allEquivalences(gameState.ship, { x: canvas.width, y: canvas.height })), _c = _b.next(); !_c.done; _c = _b.next()) {
@@ -1086,7 +1094,9 @@ define("game", ["require", "exports", "neat"], function (require, exports, neat_
             try {
                 for (var _b = __values(allEquivalences(asteroid, { x: canvas.width, y: canvas.height })), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var asteroidInstance = _c.value;
-                    drawCircle({ center: asteroidInstance.position, radius: asteroid.radius }, asteroidInstance.highlighted ? "red" : "black");
+                    if (!onlyHighlighted || asteroidInstance.highlighted) {
+                        drawCircle({ center: asteroidInstance.position, radius: asteroid.radius }, asteroidInstance.highlighted ? "red" : "black");
+                    }
                 }
             }
             catch (e_17_1) { e_17 = { error: e_17_1 }; }
@@ -1516,7 +1526,7 @@ define("game", ["require", "exports", "neat"], function (require, exports, neat_
                 // localStorage.setItem("checkpoint", JSON.stringify(checkpoint));
                 saveCheckpoint(checkpoint_1);
             }
-            if (iteration % 23 === 0) {
+            if (iteration % 1 === 0) {
                 afterDisplaying = doIteration;
                 showSimulation(best.plan);
             }
@@ -1547,10 +1557,13 @@ define("game", ["require", "exports", "neat"], function (require, exports, neat_
     };
     exports.resumeFromCheckpoint = resumeFromCheckpoint;
     // temporary test code
-    var playGame = function () {
-        setupCanvas();
+    var playGame = function (onlyHighlighted) {
+        if (!canvas) {
+            setupCanvas();
+        }
         var state = initialState();
         // We load the asteroids the same every time for now
+        asteroids = randomAsteroids(15);
         state.asteroids = asteroidsCopy();
         state.asteroids.forEach(function (asteroid) { return (asteroid.heading = normalize(asteroid.heading)); });
         var inputs = {
@@ -1595,9 +1608,9 @@ define("game", ["require", "exports", "neat"], function (require, exports, neat_
             }
         };
         var frame = 0;
-        // const { plan } = setupNetwork();
         var loop = function () {
             updateGameState(state, inputs);
+            stateSpace(state);
             if (!state.alive) {
                 console.log("You died!");
                 return;
@@ -1606,19 +1619,7 @@ define("game", ["require", "exports", "neat"], function (require, exports, neat_
                 console.log("You won!");
                 return;
             }
-            // const space = stateSpace(state);
-            // frame++;
-            // if (frame % 20 === 0) {
-            //   console.log(space);
-            // }
-            // const outputs = runStep(space, plan);
-            // const [left, right, up, down, spacebar] = outputs;
-            // inputs.left = left > 0.5;
-            // inputs.right = right > 0.5;
-            // inputs.up = up > 0.5;
-            // inputs.down = down > 0.5;
-            // inputs.space = spacebar > 0.5;
-            drawEverything(state);
+            drawEverything(state, onlyHighlighted);
             requestAnimationFrame(loop);
         };
         loop();
@@ -1641,15 +1642,23 @@ define("index", ["require", "exports", "game"], function (require, exports, game
     var toRun = function () {
         var restart = document.getElementById("restart");
         var resume = document.getElementById("resume");
+        var play = document.getElementById("play");
+        var onlyHighlighted = document.getElementById("onlyHighlighted");
         restart.onclick = function () {
             (0, game_1.startSimulations)();
         };
         resume.onclick = function () {
             (0, game_1.resumeFromCheckpoint)();
         };
+        play.onclick = function () {
+            play.blur();
+            (0, game_1.playGame)(onlyHighlighted.checked);
+        };
         (0, game_1.initDB)(function () {
             restart.disabled = false;
             resume.disabled = false;
+            play.disabled = false;
+            onlyHighlighted.disabled = false;
         });
     };
     if (document.readyState === "complete") {
@@ -1658,4 +1667,14 @@ define("index", ["require", "exports", "game"], function (require, exports, game
     else {
         document.addEventListener("DOMContentLoaded", toRun);
     }
+});
+define("neatTest", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.neatTest = void 0;
+    var drawGenome = function (genome, where) {
+        var domain = genome.domain;
+    };
+    var neatTest = function () { };
+    exports.neatTest = neatTest;
 });
